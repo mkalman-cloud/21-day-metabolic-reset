@@ -2,98 +2,345 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#020817" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Strong Week" />
+  <link rel="manifest" href="manifest.webmanifest" />
   <title>Strong Week</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
 
   <style>
-    body {
-      background: #020817;
-      color: white;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 40px;
+    :root {
+      --bg:#020817; --card:#0f172a; --card2:#111827; --line:#26344d;
+      --text:#f8fafc; --muted:#94a3b8; --green:#34d399; --blue:#60a5fa;
+      --purple:#7c3aed; --red:#fb7185; --yellow:#facc15;
     }
-
-    .card {
-      max-width: 900px;
-      margin: auto;
-      background: #1e1b4b;
-      border-radius: 20px;
-      padding: 40px;
-      box-shadow: 0 0 30px rgba(0,0,0,0.4);
-    }
-
-    h1 {
-      font-size: 42px;
-      margin-bottom: 10px;
-    }
-
-    p {
-      color: #cbd5e1;
-      font-size: 18px;
-    }
-
-    .status {
-      margin-top: 30px;
-      padding: 20px;
-      border-radius: 12px;
-      background: #0f172a;
-    }
-
-    button {
-      margin-top: 20px;
-      padding: 14px 24px;
-      border: none;
-      border-radius: 10px;
-      background: #34d399;
-      color: black;
-      font-weight: bold;
-      cursor: pointer;
-    }
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(circle at top,#172554,#020817 55%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;min-height:100vh}
+    header{position:sticky;top:0;z-index:10;background:rgba(2,8,23,.86);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.08)}
+    .top{max-width:1120px;margin:auto;padding:14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:46px;height:46px;border-radius:16px;background:linear-gradient(135deg,#60a5fa,#8b5cf6);display:grid;place-items:center;font-weight:900}
+    h1,h2,h3{margin:0 0 8px}
+    .sub{color:var(--muted);font-size:13px}
+    main{max-width:1120px;margin:auto;padding:16px}
+    .card{background:linear-gradient(180deg,rgba(15,23,42,.96),rgba(17,24,39,.96));border:1px solid rgba(255,255,255,.09);border-radius:22px;padding:18px;margin-bottom:14px;box-shadow:0 18px 50px rgba(0,0,0,.35)}
+    .banner{background:linear-gradient(135deg,#1e3a8a,#312e81)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+    .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.space{justify-content:space-between}
+    input,select,textarea{width:100%;background:#07111f;border:1px solid var(--line);border-radius:14px;padding:13px;color:var(--text);font:inherit;margin-bottom:8px}
+    textarea{min-height:90px}
+    button{border:0;border-radius:14px;padding:12px 15px;font-weight:800;cursor:pointer;background:var(--blue);color:#06101f}
+    button.green{background:var(--green)} button.secondary{background:#1f2937;color:var(--text);border:1px solid var(--line)}
+    button.red{background:#3b1220;color:#fecdd3;border:1px solid #7f1d1d} button.full{width:100%}
+    .tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px}
+    .tab{background:#111827;color:var(--muted);border:1px solid var(--line)}.tab.active{background:var(--text);color:#020817}
+    .pill{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:var(--muted);font-size:12px;margin:2px;background:#07111f}
+    .pill.green{color:#bbf7d0;border-color:#14532d}.pill.yellow{color:#fde68a;border-color:#713f12}
+    .muted{color:var(--muted)}.small{font-size:12px}.hide{display:none!important}
+    .section{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+    .exercise{border:1px solid var(--line);border-radius:18px;padding:14px;margin:10px 0;background:#08111f}
+    .setrow{display:grid;grid-template-columns:36px 1fr 1fr 44px;gap:8px;margin:8px 0;align-items:center}
+    .setrow .n{text-align:center;color:var(--muted)} .check{height:44px;background:#172033;color:white;border:1px solid var(--line)}
+    .check.done{background:var(--green);color:#052014}
+    .timer{position:fixed;left:14px;right:14px;bottom:14px;background:#0f172a;border:1px solid var(--line);border-radius:22px;padding:14px;display:none;z-index:50}
+    .timer.show{display:block}.time{font-size:34px;font-weight:900}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:flex-end;z-index:40}.modal.show{display:flex}
+    .sheet{width:100%;max-width:800px;margin:0 auto;background:#0f172a;border:1px solid var(--line);border-radius:24px 24px 0 0;padding:16px;max-height:85vh;overflow:auto}
+    @media(max-width:700px){.tabs{grid-template-columns:repeat(3,1fr)}main{padding:12px}.setrow{grid-template-columns:30px 1fr 1fr 40px}}
   </style>
 </head>
-
 <body>
-  <div class="card">
-    <h1>Strong Week Coach Mode</h1>
-    <p>Your Supabase connection is now configured correctly.</p>
-
-    <div class="status" id="status">
-      Checking Supabase connection...
+<header>
+  <div class="top">
+    <div class="brand">
+      <div class="logo">SW</div>
+      <div><h2>Strong Week</h2><div class="sub" id="profileLine">Cloud Coach Mode</div></div>
     </div>
-
-    <button onclick="testConnection()">Test Connection</button>
+    <button id="installBtn" class="secondary hide">Install</button>
   </div>
+</header>
 
-  <script>
-    const supabaseClient = window.supabase.createClient(
-      window.STRONG_WEEK_CONFIG.supabaseUrl,
-      window.STRONG_WEEK_CONFIG.supabaseAnonKey
-    );
+<main>
+  <div id="status" class="card banner"><h1>Strong Week</h1><p class="muted">Checking Supabase connection...</p></div>
 
-    async function testConnection() {
-      const status = document.getElementById("status");
+  <section id="authView" class="hide">
+    <div class="grid">
+      <div class="card">
+        <h2>Log in</h2>
+        <input id="loginEmail" placeholder="Email" />
+        <input id="loginPassword" type="password" placeholder="Password" />
+        <button class="green full" onclick="login()">Log in</button>
+      </div>
+      <div class="card">
+        <h2>Create account</h2>
+        <input id="signupName" placeholder="Full name" />
+        <input id="signupEmail" placeholder="Email" />
+        <input id="signupPassword" type="password" placeholder="Password" />
+        <select id="signupRole"><option value="client">Client</option><option value="coach">Coach</option></select>
+        <input id="coachEmail" placeholder="Coach email, optional for clients" />
+        <button class="green full" onclick="signup()">Create account</button>
+        <p class="muted small">Clients create their own account. Coach email links them to you after you approve/update their profile.</p>
+      </div>
+    </div>
+  </section>
 
-      try {
-        const { data, error } = await supabaseClient.auth.getSession();
+  <section id="appView" class="hide">
+    <div class="tabs">
+      <button class="tab active" data-view="today">Today</button>
+      <button class="tab" data-view="program">Program</button>
+      <button class="tab" data-view="progress">Progress</button>
+      <button class="tab" data-view="coach">Coach</button>
+      <button class="tab" data-view="requests">Requests</button>
+      <button class="tab" data-view="settings">Settings</button>
+    </div>
+    <div id="phaseBand"></div>
+    <div id="today" class="view"></div>
+    <div id="program" class="view hide"></div>
+    <div id="progress" class="view hide"></div>
+    <div id="coach" class="view hide"></div>
+    <div id="requests" class="view hide"></div>
+    <div id="settings" class="view hide"></div>
+  </section>
+</main>
 
-        if (error) {
-          status.innerHTML = "Supabase connected but returned an auth error.";
-          console.error(error);
-        } else {
-          status.innerHTML = "✅ Supabase connected successfully.";
-          console.log(data);
-        }
-      } catch (err) {
-        status.innerHTML = "❌ Connection failed.";
-        console.error(err);
-      }
-    }
+<div class="timer" id="timer">
+  <div class="row space">
+    <div><div class="muted small">Rest timer · Move with intent</div><div class="time" id="timerTime">01:30</div></div>
+    <div class="row"><button class="secondary" onclick="adjustTimer(-15)">-15s</button><button onclick="adjustTimer(15)">+15s</button><button class="red" onclick="stopTimer()">Stop</button></div>
+  </div>
+</div>
 
-    testConnection();
-  </script>
+<div class="modal" id="modal"><div class="sheet"><div id="modalBody"></div><button class="secondary full" onclick="closeModal()">Close</button></div></div>
+
+<script>
+const supabaseClient = window.supabase.createClient(
+  window.STRONG_WEEK_CONFIG.supabaseUrl,
+  window.STRONG_WEEK_CONFIG.supabaseAnonKey
+);
+
+const LS = "strong_week_cloud_v4";
+let currentUser = null;
+let currentProfile = null;
+let selectedClientId = null;
+let activeSession = null;
+let timerLeft = 0;
+let timerInterval = null;
+let deferredPrompt = null;
+
+const PHASES = [
+  { n:1, name:"Foundation", weeks:"Weeks 1–6", focus:["Technique","Control","Build base conditioning"], how:["Main lifts: 5 x 5 moderate weight","Leave 2–3 reps in reserve","Conditioning: steady pace"], goal:["Feel confident, not destroyed","Build consistency"] },
+  { n:2, name:"Strength Build", weeks:"Weeks 7–12", focus:["Progressive overload","Strength increase"], how:["Add 2.5–5 kg weekly to main lifts","Push closer to failure, 1–2 reps left","Conditioning slightly harder"], goal:["Noticeable strength gains","Muscles starting to show more"] },
+  { n:3, name:"Intensification", weeks:"Weeks 13–18", focus:["Heavier weights","More intensity","Power output"], how:["Main lifts: 4 x 4 heavier","Last set hard but clean","Drive and speed in movements"], goal:["Feel strong and powerful","Big jump in performance"] },
+  { n:4, name:"Performance + Athletic Look", weeks:"Weeks 19–24", focus:["Strength + conditioning together","Lean, athletic physique"], how:["Main lifts: 3–5 sets heavy but clean","Slightly reduce rest time","Conditioning becomes sharper"], goal:["Look and feel athletic","Strong + conditioned together"] }
+];
+
+const PROGRAM = [
+  { day:"Day 1 – Legs + Push", schedule:"Monday", exercises:[
+    ["Warm-Up","Bike or rower",1,8,"min","other"],["Warm-Up","Thoracic mobility",2,8,"reps","other"],
+    ["Main Lift","Squat",5,5,"reps","main"],["Power","Dumbbell press speed reps",3,6,"reps","other"],
+    ["Functional","Bench Press or Dumbbell Press",4,8,"reps","main"],["Functional","Walking Lunges",3,10,"each leg","other"],
+    ["Functional","Overhead Shoulder Press",3,8,"reps","other"],["Functional","Cable Pushdowns",3,12,"reps","other"],
+    ["Finisher / Cool Down","Dead Bug",3,8,"each side","other"],["Conditioning","Bike intervals or incline walk",1,10,"min","other"]
+  ]},
+  { day:"Day 2 – Legs + Pull", schedule:"Wednesday", exercises:[
+    ["Warm-Up","Bike or rower",1,8,"min","other"],["Warm-Up","Cat-Cow + Thread the Needle",2,6,"each side","other"],
+    ["Main Lift","Deadlift",5,5,"reps","main"],["Power","Explosive Lat Pulldown",3,6,"reps","other"],
+    ["Functional","Lat Pulldown",4,10,"reps","other"],["Functional","Bulgarian Split Squats",3,8,"each leg","other"],
+    ["Functional","Seated Row or One-arm DB Row",3,10,"reps","other"],["Functional","Biceps Curls",3,12,"reps","other"],
+    ["Finisher / Cool Down","Hanging Knee Raises",3,12,"reps","other"],["Conditioning","Bike intervals or incline walk",1,10,"min","other"]
+  ]},
+  { day:"Day 3 – Full Body + Stability", schedule:"Friday", exercises:[
+    ["Warm-Up","Bike or rower",1,8,"min","other"],["Warm-Up","Wall angels + rotations",2,8,"reps","other"],
+    ["Main Lift","Squat",4,8,"reps","main"],["Power","Push Press or Med Ball Slam",3,6,"reps","other"],
+    ["Functional","Incline Dumbbell Press",3,8,"reps","other"],["Functional","Chest-Supported Row",3,8,"reps","other"],
+    ["Functional","Lateral Raises",3,12,"reps","other"],["Functional","Face Pulls",3,15,"reps","other"],
+    ["Finisher / Cool Down","Pallof Press",3,10,"each side","other"],["Conditioning","Bike intervals or incline walk",1,10,"min","other"]
+  ]}
+];
+
+function phaseForWeek(w){ return PHASES[Math.min(3, Math.floor((Number(w)-1)/6))]; }
+function uuid(){ return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2); }
+function localKey(){ return `${LS}_${currentUser?.id || "guest"}`; }
+function getLocal(){ return JSON.parse(localStorage.getItem(localKey()) || '{"week":1,"sessions":[],"requests":[],"comments":[],"health":[]}'); }
+function setLocal(v){ localStorage.setItem(localKey(), JSON.stringify(v)); }
+
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault(); deferredPrompt = e; installBtn.classList.remove("hide");
+});
+installBtn.onclick = () => deferredPrompt?.prompt();
+
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => show(t.dataset.view));
+function show(view){
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === view));
+  document.querySelectorAll(".view").forEach(v => v.classList.add("hide"));
+  document.getElementById(view).classList.remove("hide");
+  render();
+}
+
+async function init(){
+  try {
+    const { data, error } = await supabaseClient.auth.getSession();
+    if(error) throw error;
+    currentUser = data.session?.user || null;
+    if(currentUser) await loadProfile();
+    status.innerHTML = '<h1>Strong Week</h1><p class="muted">✅ Supabase connected successfully.</p>';
+    setTimeout(()=>status.classList.add("hide"), 1200);
+    render();
+  } catch(err) {
+    status.innerHTML = `<h1>Connection issue</h1><p class="muted">❌ ${err.message || err}</p>`;
+    authView.classList.remove("hide");
+  }
+}
+supabaseClient.auth.onAuthStateChange(async (event, session) => {
+  currentUser = session?.user || null;
+  if(currentUser) await loadProfile();
+  render();
+});
+
+async function loadProfile(){
+  const { data, error } = await supabaseClient.from("profiles").select("*").eq("id", currentUser.id).maybeSingle();
+  if(error) console.warn(error);
+  currentProfile = data || { id: currentUser.id, role:"client", full_name: currentUser.email };
+  selectedClientId = currentProfile.id;
+}
+async function signup(){
+  const email = signupEmail.value.trim(), password = signupPassword.value.trim(), name = signupName.value.trim();
+  if(!email || !password || !name) return alert("Add name, email and password.");
+  const { data, error } = await supabaseClient.auth.signUp({ email, password });
+  if(error) return alert(error.message);
+  if(data.user){
+    const { error: pError } = await supabaseClient.from("profiles").insert({
+      id: data.user.id, role: signupRole.value, full_name: name
+    });
+    if(pError) alert("Account created, but profile insert needs policy check: " + pError.message);
+  }
+  alert("Account created. Check your email if confirmation is required, then log in.");
+}
+async function login(){
+  const { error } = await supabaseClient.auth.signInWithPassword({ email: loginEmail.value.trim(), password: loginPassword.value.trim() });
+  if(error) alert(error.message);
+}
+async function logout(){ await supabaseClient.auth.signOut(); currentUser=null; currentProfile=null; render(); }
+
+function render(){
+  const logged = !!currentUser;
+  authView.classList.toggle("hide", logged);
+  appView.classList.toggle("hide", !logged);
+  if(!logged){ profileLine.textContent = "Cloud Coach Mode"; return; }
+  profileLine.textContent = `${currentProfile.full_name || currentUser.email} · ${currentProfile.role}`;
+  renderPhase(); renderToday(); renderProgram(); renderProgress(); renderCoach(); renderRequests(); renderSettings();
+}
+function currentWeek(){ return getLocal().week || 1; }
+function setWeek(w){ const d=getLocal(); d.week=Number(w); setLocal(d); render(); }
+function renderPhase(){
+  const ph = phaseForWeek(currentWeek());
+  phaseBand.innerHTML = `<div class="card banner"><div class="row space"><div><h2>📅 Phase ${ph.n} – ${ph.name}</h2><p class="muted">${ph.weeks}</p></div><span class="pill green">Week ${currentWeek()}</span></div>
+  <div class="grid"><div><b>Focus</b>${ph.focus.map(x=>`<p class="small muted">• ${x}</p>`).join("")}</div><div><b>How to train</b>${ph.how.map(x=>`<p class="small muted">• ${x}</p>`).join("")}</div><div><b>Goal</b>${ph.goal.map(x=>`<p class="small muted">👉 ${x}</p>`).join("")}</div></div></div>`;
+}
+function workoutForToday(){
+  const day = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date().getDay()];
+  return PROGRAM.find(w=>w.schedule===day) || PROGRAM[0];
+}
+function workoutCard(w){
+  return `<div class="card"><div class="row space"><div><h2>${w.day}</h2><span class="pill">${w.schedule}</span><span class="pill">Week ${currentWeek()}</span></div><button class="green" onclick='startWorkout(${JSON.stringify(w.day)})'>Start</button></div>${[...new Set(w.exercises.map(e=>e[0]))].map(s=>`<span class="pill">${s}</span>`).join("")}</div>`;
+}
+function renderToday(){
+  today.innerHTML = `<div class="card"><h2>Today</h2><p class="muted">Main lifts rest 90 sec. Others rest 60 sec. Move with intent.</p></div>${workoutCard(workoutForToday())}`;
+}
+function renderProgram(){
+  program.innerHTML = `<div class="card"><div class="row space"><div><h2>Program</h2><p class="muted">Select week and start a workout.</p></div><select onchange="setWeek(this.value)">${Array.from({length:24},(_,i)=>`<option value="${i+1}" ${currentWeek()==i+1?"selected":""}>Week ${i+1}</option>`).join("")}</select></div></div>${PROGRAM.map(workoutCard).join("")}`;
+}
+function lastLog(exName){
+  const d=getLocal();
+  const logs=d.sessions.flatMap(s=>s.exercises).filter(e=>e.name===exName);
+  return logs.at(-1);
+}
+function suggest(ex){
+  const last=lastLog(ex.name);
+  if(!last) return { last:"No previous log", suggested:"Choose start weight" };
+  const weights=last.sets.map(s=>Number(s.weight)||0).filter(Boolean);
+  const max=Math.max(...weights,0);
+  if(!max) return { last:"Last weight not logged", suggested:"Enter working weight" };
+  const top=last.sets.every(s=>Number(s.reps)>=Number(ex.reps));
+  const inc=ex.type==="main" ? (phaseForWeek(currentWeek()).n>=2 ? 2.5 : 1) : 1;
+  return { last:`Last: ${max}kg`, suggested:`Suggested: ${top ? max+inc : max}kg` };
+}
+function startWorkout(dayName){
+  const w=PROGRAM.find(x=>x.day===dayName);
+  activeSession={ id:uuid(), date:new Date().toISOString(), week:currentWeek(), phase:phaseForWeek(currentWeek()).n, workout:w.day, exercises:w.exercises.map(e=>{
+    const obj={ section:e[0], name:e[1], setsCount:e[2], reps:e[3], unit:e[4], type:e[5], rest:e[5]==="main"?90:60 };
+    const sg=suggest(obj); const sw=(sg.suggested.match(/([0-9.]+)/)||[])[1] || "";
+    obj.sets=Array.from({length:obj.setsCount},(_,i)=>({n:i+1, weight:sw, reps:obj.reps, done:false}));
+    return obj;
+  }), notes:""};
+  renderSession();
+}
+function renderSession(){
+  document.querySelectorAll(".view").forEach(v=>v.classList.add("hide"));
+  today.classList.remove("hide");
+  const sections=[...new Set(activeSession.exercises.map(e=>e.section))];
+  today.innerHTML = `<div class="card"><div class="row space"><div><h2>${activeSession.workout}</h2><p class="muted">Tick each set to start rest timer.</p></div><button class="green" onclick="finishWorkout()">Finish Workout</button></div></div>` +
+  sections.map(sec=>`<div class="card"><h2>${sec}</h2>${activeSession.exercises.filter(e=>e.section===sec).map((e,ei)=>{
+    const realIndex=activeSession.exercises.indexOf(e); const sg=suggest(e);
+    return `<div class="exercise"><h3>${e.name}</h3><p class="small muted">${sg.last} · ${sg.suggested} · Rest ${e.rest}s</p>${e.sets.map((s,si)=>`<div class="setrow"><div class="n">${si+1}</div><input type="number" placeholder="kg" value="${s.weight}" onchange="activeSession.exercises[${realIndex}].sets[${si}].weight=this.value"><input type="number" placeholder="reps" value="${s.reps}" onchange="activeSession.exercises[${realIndex}].sets[${si}].reps=this.value"><button class="check ${s.done?"done":""}" onclick="toggleSet(${realIndex},${si})">✓</button></div>`).join("")}<textarea placeholder="Exercise notes/comments" onchange="activeSession.exercises[${realIndex}].comment=this.value">${e.comment||""}</textarea><button class="secondary full" onclick="requestSub('${e.name.replace(/'/g,"")}')">Request substitution</button></div>`;
+  }).join("")}</div>`).join("") +
+  `<div class="card"><h2>Health check-in</h2><div class="grid"><input id="sleep" type="number" placeholder="Sleep 1-10"><input id="energy" type="number" placeholder="Energy 1-10"><input id="stress" type="number" placeholder="Stress 1-10"><input id="soreness" type="number" placeholder="Soreness 1-10"><input id="rpe" type="number" placeholder="RPE 1-10"></div><textarea id="sessionNotes" placeholder="Overall notes"></textarea></div>`;
+}
+function toggleSet(ei,si){ const s=activeSession.exercises[ei].sets[si]; s.done=!s.done; if(s.done) startTimer(activeSession.exercises[ei].rest); renderSession(); }
+function finishWorkout(){
+  activeSession.notes=document.getElementById("sessionNotes")?.value||"";
+  const d=getLocal();
+  d.sessions.push(activeSession);
+  d.health.push({ sessionId:activeSession.id, date:new Date().toISOString(), sleep:sleep.value, energy:energy.value, stress:stress.value, soreness:soreness.value, rpe:rpe.value });
+  setLocal(d); saveSessionCloud(activeSession); activeSession=null; alert("Workout saved."); show("progress");
+}
+async function saveSessionCloud(s){
+  try {
+    const { data: workout, error:wErr } = await supabaseClient.from("workouts").insert({ user_id: currentUser.id, phase:`Phase ${s.phase}`, workout_name:s.workout }).select().single();
+    if(wErr) throw wErr;
+    const rows=s.exercises.flatMap(e=>e.sets.map(set=>({ workout_id:workout.id, exercise:e.name, sets:set.n, reps:Number(set.reps)||0, weight:Number(set.weight)||0, notes:e.comment||"" })));
+    if(rows.length) await supabaseClient.from("workout_logs").insert(rows);
+  } catch(err){ console.warn("Cloud save issue:", err.message); }
+}
+function volume(s){ return s.exercises.reduce((a,e)=>a+e.sets.reduce((b,set)=>b+(Number(set.weight)||0)*(Number(set.reps)||0),0),0); }
+function renderProgress(){
+  const d=getLocal(); const ss=d.sessions;
+  progress.innerHTML=`<div class="grid"><div class="card"><h2>${ss.length}</h2><p class="muted">Workouts</p></div><div class="card"><h2>${Math.round(ss.reduce((a,s)=>a+volume(s),0))}kg</h2><p class="muted">Total volume</p></div></div><div class="card"><h2>Completed workouts</h2>${ss.slice().reverse().map(s=>`<div class="card"><div class="row space"><div><b>${s.workout}</b><p class="small muted">${new Date(s.date).toLocaleString()} · Week ${s.week} · ${Math.round(volume(s))}kg</p></div><button class="secondary" onclick="openSession('${s.id}')">Open</button></div></div>`).join("") || "<p class='muted'>No workouts yet.</p>"}</div>`;
+}
+function openSession(id){
+  const s=getLocal().sessions.find(x=>x.id===id);
+  modalBody.innerHTML=`<h2>${s.workout}</h2><p class="muted">${new Date(s.date).toLocaleString()} · Week ${s.week}</p>${s.exercises.map(e=>`<div class="card"><b>${e.name}</b><p class="small muted">${e.section}</p>${e.sets.map(set=>`<p>Set ${set.n}: ${set.weight}kg x ${set.reps} ${set.done?"✅":""}</p>`).join("")}${e.comment?`<p>Comment: ${e.comment}</p>`:""}</div>`).join("")}`;
+  modal.classList.add("show");
+}
+function renderCoach(){
+  if(currentProfile.role!=="coach"){ coach.innerHTML="<div class='card'><h2>Coach Mode</h2><p class='muted'>Your coach manages this area.</p></div>"; return; }
+  coach.innerHTML=`<div class="card"><h2>Coach Dashboard</h2><p class="muted">This is the first cloud-ready coach screen. Client linking is the next upgrade.</p></div><div class="card"><h2>My Training</h2><p class="muted">You can train under your own coach account and later manage clients here.</p></div>`;
+}
+function requestSub(name){
+  const reason=prompt(`Request substitution for ${name}. What would you like changed?`);
+  if(!reason) return;
+  const d=getLocal(); d.requests.push({id:uuid(), exercise:name, reason, status:"pending", date:new Date().toISOString()}); setLocal(d);
+  supabaseClient.from("substitution_requests").insert({ user_id: currentUser.id, exercise:name, requested_change:reason }).then(()=>{});
+  alert("Substitution request saved.");
+}
+function renderRequests(){
+  const d=getLocal();
+  requests.innerHTML=`<div class="card"><h2>Substitution Requests</h2>${d.requests.slice().reverse().map(r=>`<div class="card"><b>${r.exercise}</b><p>${r.reason}</p><span class="pill yellow">${r.status}</span></div>`).join("") || "<p class='muted'>No requests yet.</p>"}</div>`;
+}
+function renderSettings(){
+  settings.innerHTML=`<div class="card"><h2>Account</h2><p>${currentProfile.full_name || currentUser.email}</p><p class="muted">${currentUser.email} · ${currentProfile.role}</p><button class="secondary" onclick="logout()">Log out</button></div><div class="card"><h2>Cloud</h2><p class="muted">Supabase is connected. Workout saves locally and also attempts cloud save.</p></div>`;
+}
+function startTimer(sec){ clearInterval(timerInterval); timerLeft=sec; timer.classList.add("show"); tick(); timerInterval=setInterval(()=>{timerLeft--;tick(); if(timerLeft<=0) stopTimer();},1000); }
+function tick(){ timerTime.textContent=`${String(Math.floor(timerLeft/60)).padStart(2,"0")}:${String(timerLeft%60).padStart(2,"0")}`; }
+function stopTimer(){ clearInterval(timerInterval); timer.classList.remove("show"); }
+function adjustTimer(n){ timerLeft=Math.max(0,timerLeft+n); tick(); }
+function closeModal(){ modal.classList.remove("show"); }
+
+init();
+</script>
 </body>
 </html>
