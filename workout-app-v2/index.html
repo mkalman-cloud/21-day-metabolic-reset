@@ -242,14 +242,7 @@ function show(view){
 
 async function init(){
   try {
-    const timeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Connection check timed out. Refresh the page or clear browser cache.")), 8000)
-    );
-
-    const result = await Promise.race([
-      supabaseClient.auth.getSession(),
-      timeout
-    ]);
+    const result = await supabaseClient.auth.getSession();
 
     if(result.error) throw result.error;
 
