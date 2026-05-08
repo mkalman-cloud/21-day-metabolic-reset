@@ -140,39 +140,39 @@ const PHASES = [
 
 const PROGRAM = [
   { day:"Day 1 – Lower Body Strength + Engine", schedule:"Monday", exercises:[
-    ["Warm-Up","Incline treadmill walk",1,5,"min","other"],
-    ["Warm-Up","Bodyweight squats",1,15,"reps","other"],
-    ["Warm-Up","Lunges",1,10,"each leg","other"],
+    ["Warm-Up","Incline treadmill walk",1,5,"min","incline"],
+    ["Warm-Up","Bodyweight squats",1,15,"reps","bodyweight"],
+    ["Warm-Up","Lunges",1,10,"each leg","bodyweight"],
     ["Main Lift","Barbell Squat",5,5,"reps","main"],
     ["Secondary","Romanian Deadlift",3,8,"reps","other"],
     ["Secondary","Leg Press",3,10,"reps","other"],
     ["Functional","Walking Lunges (DB)",3,10,"each leg","other"],
     ["Functional","Leg Curl",3,12,"reps","other"],
-    ["Conditioning","Incline treadmill walk, steady moderate effort",1,12,"min","other"],
-    ["Finisher / Cool Down","Plank",2,1,"max hold","other"]
+    ["Conditioning","Incline treadmill walk, steady moderate effort",1,12,"min","incline"],
+    ["Finisher / Cool Down","Plank",2,60,"seconds","duration_bodyweight"]
   ]},
   { day:"Day 2 – Upper Body Strength + Work Capacity", schedule:"Wednesday", exercises:[
-    ["Warm-Up","Row machine",1,5,"min","other"],
-    ["Warm-Up","Band pull-aparts",1,15,"reps","other"],
+    ["Warm-Up","Row machine",1,5,"min","duration"],
+    ["Warm-Up","Band pull-aparts",1,15,"reps","bodyweight"],
     ["Main Lift","Bench Press",5,5,"reps","main"],
     ["Secondary","Lat Pulldown or Pull-ups",3,10,"reps","other"],
     ["Secondary","Seated Row",3,10,"reps","other"],
     ["Functional","Dumbbell Shoulder Press",3,10,"reps","other"],
     ["Functional","Triceps Pushdown",3,12,"reps","other"],
-    ["Conditioning","Bike steady pace, heart rate in green zone",1,12,"min","other"],
+    ["Conditioning","Bike steady pace, heart rate in green zone",1,12,"min","duration"],
     ["Finisher / Cool Down","Farmer’s Carry, heavy",3,40,"m","other"]
   ]},
   { day:"Day 3 – Full Body Strength + Conditioning", schedule:"Friday", exercises:[
-    ["Warm-Up","Row or bike",1,5,"min","other"],
-    ["Warm-Up","Dynamic hip mobility",1,1,"min each leg","other"],
+    ["Warm-Up","Row machine",1,5,"min","duration"],
+    ["Warm-Up","Dynamic hip mobility",1,1,"min each leg","duration"],
     ["Main Lift","Deadlift",5,5,"reps","main"],
     ["Power","Push Press",3,6,"reps","other"],
     ["Power","Step-Ups",3,8,"reps","other"],
-    ["Functional","Walking Lunges",3,10,"each leg","other"],
+    ["Functional","Walking Lunges",3,10,"each leg","bodyweight"],
     ["Functional","Cable Woodchoppers",3,12,"each side","other"],
-    ["Conditioning","Treadmill intervals, 1 min run / 1 min walk",8,1,"round","other"],
-    ["Finisher / Cool Down","Push-ups",2,1,"near failure","other"],
-    ["Finisher / Cool Down","Plank",1,1,"max hold","other"]
+    ["Conditioning","Treadmill intervals, 1 min run / 1 min walk",8,1,"round","speed"],
+    ["Finisher / Cool Down","Push-ups",2,12,"reps","bodyweight"],
+    ["Finisher / Cool Down","Plank",1,60,"seconds","duration_bodyweight"]
   ]}
 ];
 
@@ -275,7 +275,11 @@ function lastLog(exName){
 }
 function suggest(ex){
   const last=lastLog(ex.name);
-  if(!last) return { last:"No previous log", suggested:"Choose start weight" };
+  if(!last) return { last:"No previous log", suggested: metricPrompt(ex) };
+  if(isBodyweightExercise(ex)) return { last:"Previous log", suggested:"Body Weight" };
+  if(isDurationExercise(ex)) return { last:"Previous log", suggested:"Choose duration" };
+  if(isSpeedExercise(ex)) return { last:"Previous log", suggested:"Choose speed" };
+  if(isInclineExercise(ex)) return { last:"Previous log", suggested:"Choose incline" };
   const weights=last.sets.map(s=>Number(s.weight)||0).filter(Boolean);
   const max=Math.max(...weights,0);
   if(!max) return { last:"Last weight not logged", suggested:"Enter working weight" };
@@ -283,12 +287,63 @@ function suggest(ex){
   const inc=ex.type==="main" ? (phaseForWeek(currentWeek()).n>=2 ? 2.5 : 1) : 1;
   return { last:`Last: ${max}kg`, suggested:`Suggested: ${top ? max+inc : max}kg` };
 }
+
+function isWeightedExercise(e){ return ["main","other"].includes(e.type); }
+function isBodyweightExercise(e){ return e.type === "bodyweight" || e.type === "duration_bodyweight"; }
+function isDurationExercise(e){ return e.type === "duration" || e.type === "duration_bodyweight"; }
+function isInclineExercise(e){ return e.type === "incline"; }
+function isSpeedExercise(e){ return e.type === "speed"; }
+
+function primaryMetricLabel(e){
+  if(isBodyweightExercise(e)) return "Body Weight";
+  if(isInclineExercise(e)) return "Incline Level";
+  if(isSpeedExercise(e)) return "Speed Level";
+  if(isDurationExercise(e)) return "Duration";
+  return "kg";
+}
+
+function secondaryMetricLabel(e){
+  if(isDurationExercise(e)) return "min / seconds";
+  if(isSpeedExercise(e)) return "Speed Level";
+  if(isInclineExercise(e)) return "Duration";
+  return "reps";
+}
+
+function startMetricValue(e){
+  if(isBodyweightExercise(e)) return "Body Weight";
+  return "";
+}
+
+function startSecondaryValue(e){
+  return e.reps || "";
+}
+
+function metricPrompt(e){
+  if(isSpeedExercise(e)) return "Choose speed";
+  if(isInclineExercise(e)) return "Choose incline";
+  if(isDurationExercise(e)) return "Choose duration";
+  if(isBodyweightExercise(e)) return "Body Weight";
+  return "Choose start weight";
+}
+
+function displaySetLine(e,set){
+  if(isBodyweightExercise(e)){
+    const dur = isDurationExercise(e) ? ` · ${set.reps || 0} sec` : ` x ${set.reps || 0} reps`;
+    return `Body Weight${dur}`;
+  }
+  if(isSpeedExercise(e)) return `Speed ${set.weight || 0} · Level ${set.reps || 0}`;
+  if(isInclineExercise(e)) return `Incline ${set.weight || 0} · ${set.reps || 0} min/sec`;
+  if(isDurationExercise(e)) return `${set.reps || 0} min/sec`;
+  return `${set.weight || 0}kg x ${set.reps || 0}`;
+}
+
 function startWorkout(dayName){
   const w=PROGRAM.find(x=>x.day===dayName);
   activeSession={ id:uuid(), date:new Date().toISOString(), week:currentWeek(), phase:phaseForWeek(currentWeek()).n, workout:w.day, exercises:w.exercises.map(e=>{
     const obj={ section:e[0], name:e[1], setsCount:e[2], reps:e[3], unit:e[4], type:e[5], rest:e[5]==="main"?90:60 };
-    const sg=suggest(obj); const sw=(sg.suggested.match(/([0-9.]+)/)||[])[1] || "";
-    obj.sets=Array.from({length:obj.setsCount},(_,i)=>({n:i+1, weight:sw, reps:obj.reps, done:false}));
+    const sg=suggest(obj);
+    const sw=isWeightedExercise(obj) ? ((sg.suggested.match(/([0-9.]+)/)||[])[1] || "") : startMetricValue(obj);
+    obj.sets=Array.from({length:obj.setsCount},(_,i)=>({n:i+1, weight:sw, reps:startSecondaryValue(obj), done:false}));
     return obj;
   }), notes:""};
   renderSession();
@@ -300,7 +355,7 @@ function renderSession(){
   today.innerHTML = `<div class="card"><div class="row space"><div><h2>${activeSession.workout}</h2><p class="muted">Tick each set to start rest timer.</p></div><button class="green" onclick="finishWorkout()">Finish Workout</button></div></div>` +
   sections.map(sec=>`<div class="card"><h2>${sec}</h2>${activeSession.exercises.filter(e=>e.section===sec).map((e,ei)=>{
     const realIndex=activeSession.exercises.indexOf(e); const sg=suggest(e);
-    return `<div class="exercise"><h3>${e.name}</h3><p class="small muted">${sg.last} · ${sg.suggested} · Rest ${e.rest}s</p>${e.sets.map((s,si)=>`<div class="setrow"><div class="n">${si+1}</div><input type="number" placeholder="kg" value="${s.weight}" onchange="activeSession.exercises[${realIndex}].sets[${si}].weight=this.value"><input type="number" placeholder="reps" value="${s.reps}" onchange="activeSession.exercises[${realIndex}].sets[${si}].reps=this.value"><button class="check ${s.done?"done":""}" onclick="toggleSet(${realIndex},${si})">✓</button></div>`).join("")}<textarea placeholder="Exercise notes/comments" onchange="activeSession.exercises[${realIndex}].comment=this.value">${e.comment||""}</textarea><button class="secondary full" onclick="requestSub('${e.name.replace(/'/g,"")}')">Request substitution</button></div>`;
+    return `<div class="exercise"><h3>${e.name}</h3><p class="small muted">${sg.last} · ${sg.suggested} · Rest ${e.rest}s</p>${e.sets.map((s,si)=>`<div class="setrow"><div class="n">${si+1}</div><input ${isBodyweightExercise(e) ? 'readonly' : 'type="number"'} placeholder="${primaryMetricLabel(e)}" value="${s.weight}" onchange="activeSession.exercises[${realIndex}].sets[${si}].weight=this.value"><input type="number" placeholder="${secondaryMetricLabel(e)}" value="${s.reps}" onchange="activeSession.exercises[${realIndex}].sets[${si}].reps=this.value"><button class="check ${s.done?"done":""}" onclick="toggleSet(${realIndex},${si})">✓</button></div>`).join("")}<textarea placeholder="Exercise notes/comments" onchange="activeSession.exercises[${realIndex}].comment=this.value">${e.comment||""}</textarea><button class="secondary full" onclick="requestSub('${e.name.replace(/'/g,"")}')">Request substitution</button></div>`;
   }).join("")}</div>`).join("") +
   `<div class="card"><h2>Health check-in</h2><div class="grid"><input id="sleep" type="number" placeholder="Sleep 1-10"><input id="energy" type="number" placeholder="Energy 1-10"><input id="stress" type="number" placeholder="Stress 1-10"><input id="soreness" type="number" placeholder="Soreness 1-10"><input id="rpe" type="number" placeholder="RPE 1-10"></div><textarea id="sessionNotes" placeholder="Overall notes"></textarea></div>`;
 }
@@ -316,18 +371,18 @@ async function saveSessionCloud(s){
   try {
     const { data: workout, error:wErr } = await supabaseClient.from("workouts").insert({ user_id: currentUser.id, phase:`Phase ${s.phase}`, workout_name:s.workout }).select().single();
     if(wErr) throw wErr;
-    const rows=s.exercises.flatMap(e=>e.sets.map(set=>({ workout_id:workout.id, exercise:e.name, sets:set.n, reps:Number(set.reps)||0, weight:Number(set.weight)||0, notes:e.comment||"" })));
+    const rows=s.exercises.flatMap(e=>e.sets.map(set=>({ workout_id:workout.id, exercise:e.name, sets:set.n, reps:Number(set.reps)||0, weight:isWeightedExercise(e)||isSpeedExercise(e)||isInclineExercise(e) ? (Number(set.weight)||0) : 0, notes:(e.comment||"") + (isBodyweightExercise(e) ? " Body Weight" : "") })));
     if(rows.length) await supabaseClient.from("workout_logs").insert(rows);
   } catch(err){ console.warn("Cloud save issue:", err.message); }
 }
-function volume(s){ return s.exercises.reduce((a,e)=>a+e.sets.reduce((b,set)=>b+(Number(set.weight)||0)*(Number(set.reps)||0),0),0); }
+function volume(s){ return s.exercises.reduce((a,e)=> isWeightedExercise(e) ? a+e.sets.reduce((b,set)=>b+(Number(set.weight)||0)*(Number(set.reps)||0),0) : a,0); }
 function renderProgress(){
   const d=getLocal(); const ss=d.sessions;
   progress.innerHTML=`<div class="grid"><div class="card"><h2>${ss.length}</h2><p class="muted">Workouts</p></div><div class="card"><h2>${Math.round(ss.reduce((a,s)=>a+volume(s),0))}kg</h2><p class="muted">Total volume</p></div></div><div class="card"><h2>Completed workouts</h2>${ss.slice().reverse().map(s=>`<div class="card"><div class="row space"><div><b>${s.workout}</b><p class="small muted">${new Date(s.date).toLocaleString()} · Week ${s.week} · ${Math.round(volume(s))}kg</p></div><button class="secondary" onclick="openSession('${s.id}')">Open</button></div></div>`).join("") || "<p class='muted'>No workouts yet.</p>"}</div>`;
 }
 function openSession(id){
   const s=getLocal().sessions.find(x=>x.id===id);
-  modalBody.innerHTML=`<h2>${s.workout}</h2><p class="muted">${new Date(s.date).toLocaleString()} · Week ${s.week}</p>${s.exercises.map(e=>`<div class="card"><b>${e.name}</b><p class="small muted">${e.section}</p>${e.sets.map(set=>`<p>Set ${set.n}: ${set.weight}kg x ${set.reps} ${set.done?"✅":""}</p>`).join("")}${e.comment?`<p>Comment: ${e.comment}</p>`:""}</div>`).join("")}`;
+  modalBody.innerHTML=`<h2>${s.workout}</h2><p class="muted">${new Date(s.date).toLocaleString()} · Week ${s.week}</p>${s.exercises.map(e=>`<div class="card"><b>${e.name}</b><p class="small muted">${e.section}</p>${e.sets.map(set=>`<p>Set ${set.n}: ${displaySetLine(e,set)} ${set.done?"✅":""}</p>`).join("")}${e.comment?`<p>Comment: ${e.comment}</p>`:""}</div>`).join("")}`;
   modal.classList.add("show");
 }
 function renderCoach(){
