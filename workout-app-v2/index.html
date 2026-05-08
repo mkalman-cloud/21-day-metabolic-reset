@@ -5,9 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#020817" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="Strong Week" />
-  <link rel="manifest" href="manifest.webmanifest" />
-  <title>Strong Week</title>
+  <meta name="apple-mobile-web-app-title" content="Forge" />
+  <title>Forge</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
@@ -57,15 +56,15 @@
 <header>
   <div class="top">
     <div class="brand">
-      <div class="logo">SW</div>
-      <div><h2>Strong Week</h2><div class="sub" id="profileLine">Cloud Coach Mode</div></div>
+      <div class="logo">F</div>
+      <div><h2>Move With Intent</h2><div class="sub" id="profileLine">Forge Cloud</div></div>
     </div>
     <button id="installBtn" class="secondary hide">Install</button>
   </div>
 </header>
 
 <main>
-  <div id="status" class="card banner"><h1>Strong Week</h1><p class="muted">Checking Supabase connection...</p></div>
+  <div id="status" class="card banner"><h1>Forge</h1><p class="muted">Syncing Forge Cloud...</p></div>
 
   <section id="authView" class="hide">
     <div class="grid">
@@ -117,7 +116,7 @@ const supabaseClient = window.supabase.createClient(
 );
 
 function setStatus(message, isError=false){
-  status.innerHTML = `<h1>Strong Week</h1><p class="muted">${isError ? "❌ " : "✅ "}${message}</p>`;
+  status.innerHTML = `<h1>Forge</h1><p class="muted">${isError ? "❌ " : "✅ "}${message}</p>`;
 }
 
 function hideStatusSoon(){
@@ -242,8 +241,12 @@ function show(view){
 
 async function init(){
   try {
-    const result = await supabaseClient.auth.getSession();
+    // Always show the login screen first so the app never gets stuck on loading.
+    authView.classList.remove("hide");
+    appView.classList.add("hide");
+    setStatus("Syncing Forge Cloud...");
 
+    const result = await supabaseClient.auth.getSession();
     if(result.error) throw result.error;
 
     currentUser = result.data.session?.user || null;
@@ -251,13 +254,17 @@ async function init(){
     if(currentUser) {
       await loadProfile();
       loadActiveSession();
+      setStatus("Forge Cloud connected.");
+      hideStatusSoon();
+      render();
+      return;
     }
 
-    setStatus("Supabase connected successfully.");
+    setStatus("Forge Cloud ready. Please log in.");
     hideStatusSoon();
     render();
   } catch(err) {
-    console.error("Strong Week init error:", err);
+    console.error("Forge init error:", err);
     setStatus(err.message || String(err), true);
     authView.classList.remove("hide");
     appView.classList.add("hide");
@@ -378,7 +385,7 @@ function render(){
   const logged = !!currentUser;
   authView.classList.toggle("hide", logged);
   appView.classList.toggle("hide", !logged);
-  if(!logged){ profileLine.textContent = "Cloud Coach Mode"; return; }
+  if(!logged){ profileLine.textContent = "Forge Cloud"; return; }
   profileLine.textContent = `${currentProfile.full_name || currentUser.email} · ${currentProfile.role}`;
   renderTabs();
   if(currentProfile.role === "client" && !clientProfileComplete()){
