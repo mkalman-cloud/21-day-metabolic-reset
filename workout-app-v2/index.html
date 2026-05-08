@@ -80,6 +80,9 @@
         <input id="signupName" placeholder="Full name" />
         <input id="signupEmail" placeholder="Email" />
         <input id="signupPassword" type="password" placeholder="Password" />
+        <input id="signupDob" type="date" placeholder="Date of birth" />
+        <input id="signupEmergencyName" placeholder="Emergency contact name" />
+        <input id="signupEmergencyPhone" placeholder="Emergency contact phone" />
         <button class="green full" onclick="signup()">Create account</button>
         <p class="muted small">Client accounts are automatically assigned to Marcell as coach.</p>
       </div>
@@ -87,14 +90,7 @@
   </section>
 
   <section id="appView" class="hide">
-    <div class="tabs">
-      <button class="tab active" data-view="today">Today</button>
-      <button class="tab" data-view="program">Program</button>
-      <button class="tab" data-view="progress">Progress</button>
-      <button class="tab" data-view="coach">Coach</button>
-      <button class="tab" data-view="requests">Requests</button>
-      <button class="tab" data-view="settings">Settings</button>
-    </div>
+    <div class="tabs" id="tabs"></div>
     <div id="phaseBand"></div>
     <div id="today" class="view"></div>
     <div id="program" class="view hide"></div>
@@ -121,7 +117,7 @@ const supabaseClient = window.supabase.createClient(
 );
 
 const LS = "strong_week_cloud_v4";
-const PERMANENT_COACH_EMAIL = "marcell.kalman@yahoo.com";
+const PERMANENT_COACH_EMAIL = "marcell.fitness@gmail.com";
 let currentUser = null;
 let currentProfile = null;
 let selectedClientId = null;
@@ -205,8 +201,18 @@ window.addEventListener("beforeinstallprompt", e => {
 });
 installBtn.onclick = () => deferredPrompt?.prompt();
 
-document.querySelectorAll(".tab").forEach(t => t.onclick = () => show(t.dataset.view));
+
+function renderTabs(){
+  const items = currentProfile?.role === "coach"
+    ? [["today","Today"],["program","Program"],["progress","Progress"],["coach","Clients"],["requests","Requests"],["settings","Settings"]]
+    : [["today","Today"],["program","Program"],["progress","Progress"],["requests","Requests"],["settings","Settings"]];
+
+  const active = document.querySelector(".tab.active")?.dataset.view || "today";
+  tabs.innerHTML = items.map(([view,label]) => `<button class="tab ${view===active ? "active" : ""}" data-view="${view}">${label}</button>`).join("");
+  }
+
 function show(view){
+  if(view === "coach" && currentProfile?.role !== "coach") view = "today";
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === view));
   document.querySelectorAll(".view").forEach(v => v.classList.add("hide"));
   document.getElementById(view).classList.remove("hide");
@@ -247,7 +253,10 @@ async function loadProfile(){
       role: isCoach ? "coach" : "client",
       full_name: currentUser.email,
       email: currentUser.email,
-      coach_id: isCoach ? null : (coachProfile ? coachProfile.id : null)
+      coach_id: isCoach ? null : (coachProfile ? coachProfile.id : null),
+      date_of_birth: null,
+      emergency_contact_name: "",
+      emergency_contact_phone: ""
     };
     const { data:newProfile, error:insertError } = await supabaseClient.from("profiles").insert(profilePayload).select().single();
     if(insertError) console.warn(insertError);
@@ -267,6 +276,10 @@ async function signup(){
   const email = signupEmail.value.trim();
   const password = signupPassword.value.trim();
   const name = signupName.value.trim();
+  const dob = signupDob.value || null;
+  const emergencyName = signupEmergencyName.value.trim();
+  const emergencyPhone = signupEmergencyPhone.value.trim();
+
   if(!email || !password || !name) return alert("Add name, email and password.");
 
   const isCoach = isPermanentCoachEmail(email);
@@ -281,7 +294,10 @@ async function signup(){
       role: isCoach ? "coach" : "client",
       full_name: name,
       email: email,
-      coach_id: isCoach ? null : (coachProfile ? coachProfile.id : null)
+      coach_id: isCoach ? null : (coachProfile ? coachProfile.id : null),
+      date_of_birth: dob,
+      emergency_contact_name: emergencyName,
+      emergency_contact_phone: emergencyPhone
     };
 
     const { error: pError } = await supabaseClient.from("profiles").insert(profilePayload);
@@ -305,6 +321,7 @@ function render(){
   appView.classList.toggle("hide", !logged);
   if(!logged){ profileLine.textContent = "Cloud Coach Mode"; return; }
   profileLine.textContent = `${currentProfile.full_name || currentUser.email} · ${currentProfile.role}`;
+  renderTabs();
   renderPhase(); renderToday(); renderProgram(); renderProgress(); renderCoach(); renderRequests(); renderSettings();
 }
 function currentWeek(){ return getLocal().week || 1; }
@@ -461,7 +478,7 @@ function openSession(id){
 }
 async function renderCoach(){
   if(currentProfile.role!=="coach"){
-    coach.innerHTML="<div class='card'><h2>Coach Mode</h2><p class='muted'>Your coach manages this area.</p></div>";
+    coach.innerHTML="";
     return;
   }
 
@@ -472,14 +489,18 @@ async function renderCoach(){
     .order("full_name", { ascending:true });
 
   if(error){
-    coach.innerHTML=`<div class="card"><h2>Coach Dashboard</h2><p class="muted">Could not load clients: ${error.message}</p></div>`;
+    coach.innerHTML=`<div class="card"><h2>Clients</h2><p class="muted">Could not load clients: ${error.message}</p></div>`;
     return;
   }
 
-  coach.innerHTML=`<div class="card"><h2>Coach Dashboard</h2><p class="muted">Permanent coach: ${PERMANENT_COACH_EMAIL}. New clients are automatically assigned to you.</p></div>
+  coach.innerHTML=`<div class="card"><h2>Clients</h2><p class="muted">Permanent coach: ${PERMANENT_COACH_EMAIL}. New clients are automatically assigned to you.</p></div>
   <div class="grid">
     <div class="card"><h2>My Training</h2><p class="muted">Use Today and Program tabs for your own training.</p></div>
-    ${(clients||[]).map(c=>`<div class="card"><h2>${c.full_name || c.email || "Client"}</h2><p class="muted">${c.email || ""}</p><span class="pill green">Assigned to you</span></div>`).join("") || "<div class='card'><p class='muted'>No clients yet.</p></div>"}
+    ${(clients||[]).map(c=>`<div class="card"><h2>${c.full_name || c.email || "Client"}</h2>
+      <p class="muted">${c.email || ""}</p>
+      <p class="small">DOB: ${c.date_of_birth || "Not added"}</p>
+      <p class="small">Emergency: ${c.emergency_contact_name || "Not added"} ${c.emergency_contact_phone ? "· " + c.emergency_contact_phone : ""}</p>
+      <span class="pill green">Assigned to you</span></div>`).join("") || "<div class='card'><p class='muted'>No clients yet.</p></div>"}
   </div>`;
 }
 function requestSub(name){
@@ -493,8 +514,48 @@ function renderRequests(){
   const d=getLocal();
   requests.innerHTML=`<div class="card"><h2>Substitution Requests</h2>${d.requests.slice().reverse().map(r=>`<div class="card"><b>${r.exercise}</b><p>${r.reason}</p><span class="pill yellow">${r.status}</span></div>`).join("") || "<p class='muted'>No requests yet.</p>"}</div>`;
 }
+
+async function updateProfileDetails(){
+  const payload = {
+    full_name: settingsName.value.trim(),
+    date_of_birth: settingsDob.value || null,
+    emergency_contact_name: settingsEmergencyName.value.trim(),
+    emergency_contact_phone: settingsEmergencyPhone.value.trim()
+  };
+
+  const { data, error } = await supabaseClient
+    .from("profiles")
+    .update(payload)
+    .eq("id", currentUser.id)
+    .select()
+    .single();
+
+  if(error){
+    alert("Could not update profile: " + error.message);
+    return;
+  }
+
+  currentProfile = data;
+  alert("Profile updated.");
+  render();
+}
+
 function renderSettings(){
-  settings.innerHTML=`<div class="card"><h2>Account</h2><p>${currentProfile.full_name || currentUser.email}</p><p class="muted">${currentUser.email} · ${currentProfile.role}</p><button class="secondary" onclick="logout()">Log out</button></div><div class="card"><h2>Cloud</h2><p class="muted">Supabase is connected. Workout saves locally and also attempts cloud save.</p></div>`;
+  settings.innerHTML=`<div class="card"><h2>Account</h2>
+    <p class="muted">${currentUser.email} · ${currentProfile.role}</p>
+    <label class="small muted">Full name</label>
+    <input id="settingsName" value="${currentProfile.full_name || ""}" placeholder="Full name">
+    <label class="small muted">Date of birth</label>
+    <input id="settingsDob" type="date" value="${currentProfile.date_of_birth || ""}">
+    <label class="small muted">Emergency contact name</label>
+    <input id="settingsEmergencyName" value="${currentProfile.emergency_contact_name || ""}" placeholder="Emergency contact name">
+    <label class="small muted">Emergency contact phone</label>
+    <input id="settingsEmergencyPhone" value="${currentProfile.emergency_contact_phone || ""}" placeholder="Emergency contact phone">
+    <button class="green full" onclick="updateProfileDetails()">Save profile details</button>
+    <br><br>
+    <button class="secondary" onclick="logout()">Log out</button>
+  </div>
+  <div class="card"><h2>Cloud</h2><p class="muted">Supabase is connected. Workout saves locally and also attempts cloud save.</p></div>`;
 }
 function startTimer(sec){ clearInterval(timerInterval); timerLeft=sec; timer.classList.add("show"); tick(); timerInterval=setInterval(()=>{timerLeft--;tick(); if(timerLeft<=0) stopTimer();},1000); }
 function tick(){ timerTime.textContent=`${String(Math.floor(timerLeft/60)).padStart(2,"0")}:${String(timerLeft%60).padStart(2,"0")}`; }
