@@ -121,7 +121,7 @@ function setStatus(message, isError=false){
 }
 
 function hideStatusSoon(){
-  setTimeout(() => status.classList.add("hide"), 700);
+  setTimeout(() => { if(status) status.classList.add("hide"); }, 700);
 }
 
 const LS = "strong_week_cloud_v4";
@@ -211,29 +211,33 @@ installBtn.onclick = () => deferredPrompt?.prompt();
 
 
 function renderTabs(){
-  if(!tabs) return;
+  const tabsEl = document.getElementById("tabs");
+  if(!tabsEl) return;
 
-  const role = currentProfile?.role || "client";
+  const activeView = document.querySelector(".view:not(.hide)")?.id || "today";
+  const items = currentProfile?.role === "coach"
+    ? [["today","Today"],["program","Program"],["progress","Progress"],["coach","Clients"],["requests","Requests"],["settings","Settings"]]
+    : [["today","Today"],["program","Program"],["progress","Progress"],["requests","Requests"],["settings","Settings"]];
 
-  tabs.innerHTML = "";
+  tabsEl.innerHTML = items.map(([view,label]) =>
+    `<button class="tab ${view === activeView ? "active" : ""}" data-view="${view}" onclick="show('${view}')">${label}</button>`
+  ).join("");
+}
 
-  const views = [
-    { key:"today", label:"Today" },
-    { key:"program", label:"Program" },
-    { key:"progress", label:"Progress" },
-    ...(role === "coach" ? [{ key:"coach", label:"Clients" }] : []),
-    { key:"requests", label:"Requests" },
-    { key:"settings", label:"Settings" }
-  ];
+function show(view){
+  if(view === "coach" && currentProfile?.role !== "coach") view = "today";
+  if(currentProfile?.role === "client" && !clientProfileComplete() && view !== "settings") view = "settings";
 
-  views.forEach(v => {
-    const btn = document.createElement("button");
-    btn.className = "tab";
-    btn.dataset.view = v.key;
-    btn.textContent = v.label;
-    btn.onclick = () => show(v.key);
-    tabs.appendChild(btn);
+  document.querySelectorAll(".tab").forEach(t => {
+    t.classList.toggle("active", t.dataset.view === view);
   });
+
+  document.querySelectorAll(".view").forEach(v => v.classList.add("hide"));
+
+  const target = document.getElementById(view);
+  if(target) target.classList.remove("hide");
+
+  render();
 }
 
 async function init(){
