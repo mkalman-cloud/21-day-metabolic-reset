@@ -116,6 +116,14 @@ const supabaseClient = window.supabase.createClient(
   window.STRONG_WEEK_CONFIG.supabaseAnonKey
 );
 
+function setStatus(message, isError=false){
+  status.innerHTML = `<h1>Strong Week</h1><p class="muted">${isError ? "❌ " : "✅ "}${message}</p>`;
+}
+
+function hideStatusSoon(){
+  setTimeout(() => status.classList.add("hide"), 700);
+}
+
 const LS = "strong_week_cloud_v4";
 const PERMANENT_COACH_EMAIL = "marcell.fitness@gmail.com";
 let currentUser = null;
@@ -213,6 +221,7 @@ function renderTabs(){
 
 function show(view){
   if(view === "coach" && currentProfile?.role !== "coach") view = "today";
+  if(currentProfile?.role === "client" && !clientProfileComplete() && view !== "settings") view = "settings";
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === view));
   document.querySelectorAll(".view").forEach(v => v.classList.add("hide"));
   document.getElementById(view).classList.remove("hide");
@@ -221,22 +230,46 @@ function show(view){
 
 async function init(){
   try {
-    const { data, error } = await supabaseClient.auth.getSession();
-    if(error) throw error;
-    currentUser = data.session?.user || null;
-    if(currentUser) { await loadProfile(); loadActiveSession(); }
-    status.innerHTML = '<h1>Strong Week</h1><p class="muted">✅ Supabase connected successfully.</p>';
-    setTimeout(()=>status.classList.add("hide"), 1200);
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Connection check timed out. Refresh the page or clear browser cache.")), 8000)
+    );
+
+    const result = await Promise.race([
+      supabaseClient.auth.getSession(),
+      timeout
+    ]);
+
+    if(result.error) throw result.error;
+
+    currentUser = result.data.session?.user || null;
+
+    if(currentUser) {
+      await loadProfile();
+      loadActiveSession();
+    }
+
+    setStatus("Supabase connected successfully.");
+    hideStatusSoon();
     render();
   } catch(err) {
-    status.innerHTML = `<h1>Connection issue</h1><p class="muted">❌ ${err.message || err}</p>`;
+    console.error("Strong Week init error:", err);
+    setStatus(err.message || String(err), true);
     authView.classList.remove("hide");
+    appView.classList.add("hide");
   }
 }
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
-  currentUser = session?.user || null;
-  if(currentUser) { await loadProfile(); loadActiveSession(); }
-  render();
+  try {
+    currentUser = session?.user || null;
+    if(currentUser) {
+      await loadProfile();
+      loadActiveSession();
+    }
+    render();
+  } catch(err) {
+    console.error("Auth state error:", err);
+    alert("Login worked, but profile loading needs attention: " + (err.message || err));
+  }
 });
 
 async function loadProfile(){
@@ -283,6 +316,17 @@ async function signup(){
   if(!email || !password || !name) return alert("Add name, email and password.");
 
   const isCoach = isPermanentCoachEmail(email);
+
+  if(!isCoach){
+    if(!dob || !emergencyName || !emergencyPhone){
+      return alert("Clients must add date of birth, emergency contact name, and emergency contact phone before creating an account.");
+    }
+
+    if(name.trim().toLowerCase() === emergencyName.trim().toLowerCase()){
+      return alert("Emergency contact cannot be the same person as the client. Please add a different emergency contact.");
+    }
+  }
+
   const coachProfile = isCoach ? null : await getPermanentCoachProfile();
 
   const { data, error } = await supabaseClient.auth.signUp({ email, password });
@@ -295,9 +339,9 @@ async function signup(){
       full_name: name,
       email: email,
       coach_id: isCoach ? null : (coachProfile ? coachProfile.id : null),
-      date_of_birth: dob,
-      emergency_contact_name: emergencyName,
-      emergency_contact_phone: emergencyPhone
+      date_of_birth: isCoach ? null : dob,
+      emergency_contact_name: isCoach ? "" : emergencyName,
+      emergency_contact_phone: isCoach ? "" : emergencyPhone
     };
 
     const { error: pError } = await supabaseClient.from("profiles").insert(profilePayload);
@@ -315,6 +359,16 @@ async function login(){
 }
 async function logout(){ await supabaseClient.auth.signOut(); currentUser=null; currentProfile=null; render(); }
 
+
+function clientProfileComplete(){
+  if(currentProfile?.role !== "client") return true;
+  return !!(currentProfile.date_of_birth && currentProfile.emergency_contact_name && currentProfile.emergency_contact_phone);
+}
+
+function missingProfileWarning(){
+  return `<div class="card banner"><h2>Profile details required</h2><p class="muted">Before continuing, please add your date of birth and emergency contact details in Settings.</p><button class="green" onclick="show('settings')">Go to Settings</button></div>`;
+}
+
 function render(){
   const logged = !!currentUser;
   authView.classList.toggle("hide", logged);
@@ -322,6 +376,15 @@ function render(){
   if(!logged){ profileLine.textContent = "Cloud Coach Mode"; return; }
   profileLine.textContent = `${currentProfile.full_name || currentUser.email} · ${currentProfile.role}`;
   renderTabs();
+  if(currentProfile.role === "client" && !clientProfileComplete()){
+    renderPhase();
+    today.innerHTML = missingProfileWarning();
+    program.innerHTML = missingProfileWarning();
+    progress.innerHTML = missingProfileWarning();
+    requests.innerHTML = missingProfileWarning();
+    renderSettings();
+    return;
+  }
   renderPhase(); renderToday(); renderProgram(); renderProgress(); renderCoach(); renderRequests(); renderSettings();
 }
 function currentWeek(){ return getLocal().week || 1; }
@@ -522,6 +585,18 @@ async function updateProfileDetails(){
     emergency_contact_name: settingsEmergencyName.value.trim(),
     emergency_contact_phone: settingsEmergencyPhone.value.trim()
   };
+
+  if(currentProfile.role === "client"){
+    if(!payload.date_of_birth || !payload.emergency_contact_name || !payload.emergency_contact_phone){
+      alert("Clients must keep date of birth and emergency contact details completed.");
+      return;
+    }
+
+    if(payload.full_name.toLowerCase() === payload.emergency_contact_name.toLowerCase()){
+      alert("Emergency contact cannot be the same person as the client.");
+      return;
+    }
+  }
 
   const { data, error } = await supabaseClient
     .from("profiles")
