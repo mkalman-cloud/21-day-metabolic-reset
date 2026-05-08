@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strong Week</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+
+  <style>
+    body {
+      background: #020817;
+      color: white;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 40px;
+    }
+
+    .card {
+      max-width: 900px;
+      margin: auto;
+      background: #1e1b4b;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.4);
+    }
+
+    h1 {
+      font-size: 42px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #cbd5e1;
+      font-size: 18px;
+    }
+
+    .status {
+      margin-top: 30px;
+      padding: 20px;
+      border-radius: 12px;
+      background: #0f172a;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 10px;
+      background: #34d399;
+      color: black;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h1>Strong Week Coach Mode</h1>
+    <p>Your Supabase connection is now configured correctly.</p>
+
+    <div class="status" id="status">
+      Checking Supabase connection...
+    </div>
+
+    <button onclick="testConnection()">Test Connection</button>
+  </div>
+
+  <script>
+    const supabaseClient = window.supabase.createClient(
+      window.STRONG_WEEK_CONFIG.supabaseUrl,
+      window.STRONG_WEEK_CONFIG.supabaseAnonKey
+    );
+
+    async function testConnection() {
+      const status = document.getElementById("status");
+
+      try {
+        const { data, error } = await supabaseClient.auth.getSession();
+
+        if (error) {
+          status.innerHTML = "Supabase connected but returned an auth error.";
+          console.error(error);
+        } else {
+          status.innerHTML = "✅ Supabase connected successfully.";
+          console.log(data);
+        }
+      } catch (err) {
+        status.innerHTML = "❌ Connection failed.";
+        console.error(err);
+      }
+    }
+
+    testConnection();
+  </script>
+</body>
+</html>
