@@ -72,7 +72,7 @@
         <h2>Log in</h2>
         <input id="loginEmail" placeholder="Email" />
         <input id="loginPassword" type="password" placeholder="Password" />
-        <button class="green full" onclick="login()">Log in</button>
+        <button id="loginBtn" type="button" class="green full">Log in</button>
       </div>
       <div class="card">
         <h2>Create account</h2>
@@ -82,7 +82,7 @@
         <input id="signupDob" type="date" placeholder="Date of birth" />
         <input id="signupEmergencyName" placeholder="Emergency contact name" />
         <input id="signupEmergencyPhone" placeholder="Emergency contact phone" />
-        <button class="green full" onclick="signup()">Create account</button>
+        <button id="signupBtn" type="button" class="green full">Create account</button>
         <p class="muted small">Client accounts are automatically assigned to Marcell as coach.</p>
       </div>
     </div>
@@ -366,8 +366,29 @@ async function signup(){
   alert(isCoach ? "Coach account created. Log in." : "Client account created and assigned to Marcell. Check your email if confirmation is required, then log in.");
 }
 async function login(){
-  const { error } = await supabaseClient.auth.signInWithPassword({ email: loginEmail.value.trim(), password: loginPassword.value.trim() });
-  if(error) alert(error.message);
+  try {
+    const email = loginEmail.value.trim();
+    const password = loginPassword.value.trim();
+
+    if(!email || !password){
+      alert("Please enter your email and password.");
+      return;
+    }
+
+    console.log("Attempting Forge login for", email);
+
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+    if(error) {
+      alert(error.message);
+      return;
+    }
+
+    console.log("Forge login successful");
+  } catch(err) {
+    console.error("Forge login crashed:", err);
+    alert("Login error: " + (err.message || err));
+  }
 }
 async function logout(){ await supabaseClient.auth.signOut(); currentUser=null; currentProfile=null; render(); }
 
@@ -649,6 +670,28 @@ function tick(){ timerTime.textContent=`${String(Math.floor(timerLeft/60)).padSt
 function stopTimer(){ clearInterval(timerInterval); timer.classList.remove("show"); }
 function adjustTimer(n){ timerLeft=Math.max(0,timerLeft+n); tick(); }
 function closeModal(){ modal.classList.remove("show"); }
+
+
+function wireButtons(){
+  const loginButton = document.getElementById("loginBtn");
+  const signupButton = document.getElementById("signupBtn");
+
+  if(loginButton){
+    loginButton.addEventListener("click", async () => {
+      console.log("Forge login button clicked");
+      await login();
+    });
+  }
+
+  if(signupButton){
+    signupButton.addEventListener("click", async () => {
+      console.log("Forge signup button clicked");
+      await signup();
+    });
+  }
+}
+
+wireButtons();
 
 init();
 </script>
