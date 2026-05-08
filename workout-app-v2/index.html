@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#020817" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="Strong Week" />
+  <meta name="apple-mobile-web-app-title" content="Forge" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <title>Strong Week</title>
+  <title>Forge</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
@@ -57,15 +57,15 @@
 <header>
   <div class="top">
     <div class="brand">
-      <div class="logo">SW</div>
-      <div><h2>Strong Week</h2><div class="sub" id="profileLine">Cloud Coach Mode</div></div>
+      <div class="logo">F</div>
+      <div><h2>Move With Intent</h2><div class="sub" id="profileLine">Cloud Coach Mode</div></div>
     </div>
     <button id="installBtn" class="secondary hide">Install</button>
   </div>
 </header>
 
 <main>
-  <div id="status" class="card banner"><h1>Strong Week</h1><p class="muted">Checking Supabase connection...</p></div>
+  <div id="status" class="card banner"><h1>Forge</h1><p class="muted">Syncing Forge Cloud...</p></div>
 
   <section id="authView" class="hide">
     <div class="grid">
@@ -117,7 +117,7 @@ const supabaseClient = window.supabase.createClient(
 );
 
 function setStatus(message, isError=false){
-  status.innerHTML = `<h1>Strong Week</h1><p class="muted">${isError ? "❌ " : "✅ "}${message}</p>`;
+  status.innerHTML = `<h1>Forge</h1><p class="muted">${isError ? "❌ " : "✅ "}${message}</p>`;
 }
 
 function hideStatusSoon(){
