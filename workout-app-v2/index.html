@@ -1,95 +1,99 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#070b12" />
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
-<meta name="apple-mobile-web-app-title" content="Strong Week" />
-<script>
-const supabaseClient = window.supabase.createClient(
-window.STRONG_WEEK_CONFIG.supabaseUrl,
-window.STRONG_WEEK_CONFIG.supabaseAnonKey
-);
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strong Week</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+
+  <style>
+    body {
+      background: #020817;
+      color: white;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 40px;
+    }
+
+    .card {
+      max-width: 900px;
+      margin: auto;
+      background: #1e1b4b;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.4);
+    }
+
+    h1 {
+      font-size: 42px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #cbd5e1;
+      font-size: 18px;
+    }
+
+    .status {
+      margin-top: 30px;
+      padding: 20px;
+      border-radius: 12px;
+      background: #0f172a;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 10px;
+      background: #34d399;
+      color: black;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
 <body>
-console.log("Strong Week Supabase connected:", supabaseClient);
-<main class="wrap">
- const LS='strong_week_coach_v3';
- <div id="appView" class="hide">
-  <div class="tabs"><button class="tab active" data-view="today">Today</button><button class="tab" data-view="program">Program</button><button class="tab" data-view="progress">Progress</button><button class="tab" data-view="coach">Coach</button><button class="tab" data-view="requests">Requests</button><button class="tab" data-view="settings">Settings</button></div>
-  <div id="phaseBand"></div>
-  <section id="today" class="view"></section><section id="program" class="view hide"></section><section id="progress" class="view hide"></section><section id="coach" class="view hide"></section><section id="requests" class="view hide"></section><section id="settings" class="view hide"></section>
- </div>
-</main>
-<div class="timer" id="timer"><div class="row space"><div><div class="muted small">Rest timer · Move with intent</div><div class="time" id="timerTime">01:30</div></div><div class="row"><button class="btn secondary" id="minusTimer">-15s</button><button class="btn" id="plusTimer">+15s</button><button class="btn danger" id="stopTimer">Stop</button></div></div></div>
-<div class="modal" id="modal"><div class="sheet"><div id="modalBody"></div><button class="btn secondary full" onclick="closeModal()">Close</button></div></div>
-<script src="config.js"></script>
-<script>
-const LS='strong_week_coach_v3';
-const PHASES=[{n:1,name:'Foundation',weeks:'Weeks 1–6',focus:['Technique','Control','Build base conditioning'],how:['Main lifts: 5 x 5 moderate weight','Leave 2–3 reps in reserve','Conditioning: steady pace'],goal:['Feel confident, not destroyed','Build consistency']},{n:2,name:'Strength Build',weeks:'Weeks 7–12',focus:['Progressive overload','Strength increase'],how:['Add 2.5–5 kg weekly to main lifts','Push closer to failure, 1–2 reps left','Conditioning slightly harder'],goal:['Noticeable strength gains','Muscles starting to show more']},{n:3,name:'Intensification',weeks:'Weeks 13–18',focus:['Heavier weights','More intensity','Power output'],how:['Main lifts: 4 x 4 heavier','Last set hard but clean','Drive and speed in movements'],goal:['Feel strong and powerful','Big jump in performance']},{n:4,name:'Performance + Athletic Look',weeks:'Weeks 19–24',focus:['Strength + conditioning together','Lean, athletic physique'],how:['Main lifts: 3–5 sets heavy but clean','Slightly reduce rest time','Conditioning becomes sharper'],goal:['Look and feel athletic','Strong + conditioned together']}];
-const defaultSections=[
-{key:'warmup',title:'🔥 Warm-Up',time:'8 min',kind:'other',exercises:[{name:'Bike or rower',sets:1,reps:8,unit:'min',type:'other'},{name:'Thoracic mobility',sets:2,reps:8,unit:'reps',type:'other'}]},
-{key:'main',title:'🧱 Main Lift',time:'15 min',kind:'main',exercises:[]},
-{key:'power',title:'⚡ Power',time:'8–10 min',kind:'other',exercises:[]},
-{key:'functional',title:'⚙️ Functional',time:'10–12 min',kind:'other',exercises:[]},
-{key:'conditioning',title:'🏃 Conditioning',time:'10–12 min',kind:'other',exercises:[{name:'Bike intervals or incline walk',sets:1,reps:10,unit:'min',type:'other'}]},
-{key:'finisher',title:'🧠 Finisher / Cool Down',time:'3–5 min',kind:'other',exercises:[{name:'Breathing + gentle mobility',sets:1,reps:5,unit:'min',type:'other'}]}
-];
-function uid(){return Math.random().toString(36).slice(2)+Date.now().toString(36)}
-function phaseForWeek(w){return PHASES[Math.min(3,Math.floor((Number(w)-1)/6))]}
-function clone(x){return JSON.parse(JSON.stringify(x))}
-function baseProgram(){const days=[
-{name:'Day 1 – Legs + Push',schedule:'Monday',main:{name:'Squat',sets:5,reps:5,unit:'reps',type:'main'},power:{name:'Dumbbell press speed reps',sets:3,reps:6,unit:'reps',type:'other'},functional:[{name:'Bench Press or Dumbbell Press',sets:4,reps:8,unit:'reps',type:'main'},{name:'Walking Lunges',sets:3,reps:10,unit:'each leg',type:'other'},{name:'Overhead Shoulder Press',sets:3,reps:8,unit:'reps',type:'other'},{name:'Cable Pushdowns',sets:3,reps:12,unit:'reps',type:'other'},{name:'Dead Bug',sets:3,reps:8,unit:'each side',type:'other'}]},
-{name:'Day 2 – Legs + Pull',schedule:'Wednesday',main:{name:'Deadlift',sets:5,reps:5,unit:'reps',type:'main'},power:{name:'Explosive Lat Pulldown',sets:3,reps:6,unit:'reps',type:'other'},functional:[{name:'Lat Pulldown',sets:4,reps:10,unit:'reps',type:'other'},{name:'Step-ups or Bulgarian Split Squats',sets:3,reps:8,unit:'each leg',type:'other'},{name:'Seated Row or One-arm DB Row',sets:3,reps:10,unit:'reps',type:'other'},{name:'Biceps Curls',sets:3,reps:12,unit:'reps',type:'other'},{name:'Hanging Knee Raises',sets:3,reps:12,unit:'reps',type:'other'}]},
-{name:'Day 3 – Full Body + Stability',schedule:'Friday',main:{name:'Squat',sets:4,reps:8,unit:'reps',type:'main'},power:{name:'Push Press or Med Ball Slam',sets:3,reps:6,unit:'reps',type:'other'},functional:[{name:'Incline Dumbbell Press',sets:3,reps:8,unit:'reps',type:'other'},{name:'Chest-Supported Row',sets:3,reps:8,unit:'reps',type:'other'},{name:'Lateral Raises',sets:3,reps:12,unit:'reps',type:'other'},{name:'Face Pulls',sets:3,reps:15,unit:'reps',type:'other'},{name:'Pallof Press',sets:3,reps:10,unit:'each side',type:'other'}]}
-];
-let workouts=[];for(let week=1;week<=24;week++){let ph=phaseForWeek(week);days.forEach((d,idx)=>{let sections=clone(defaultSections);sections[1].exercises=[clone(d.main)];sections[2].exercises=[clone(d.power)];sections[3].exercises=clone(d.functional);sections.forEach(sec=>sec.exercises.forEach(e=>{e.id=uid(); if(e.type==='main'){e.rest=90;e.progression=ph.n===1?'conservative':ph.n===2?'2.5–5 kg when top reps are clean':ph.n===3?'heavier clean sets': 'heavy but clean';}else{e.rest=60;e.progression='1–2 kg when top reps are clean';}}));workouts.push({id:`w${week}-${idx+1}`,week,phase:ph.n,name:d.name,schedule:d.schedule,sections});});}return workouts;}
-function fresh(){return {mode:'local-demo',currentUser:null,selectedClient:null,users:[{id:'coach-demo',name:'Marcell',email:'coach@strongweek.local',role:'coach',coachId:null},{id:'client-demo',name:'Demo Client',email:'client@strongweek.local',role:'client',coachId:'coach-demo'}],workouts:baseProgram(),assignments:[{id:uid(),coachId:'coach-demo',clientId:'coach-demo',week:1},{id:uid(),coachId:'coach-demo',clientId:'client-demo',week:1}],sessions:[],requests:[],comments:[],health:[]}}
-let db=JSON.parse(localStorage.getItem(LS)||'null')||fresh();let activeSession=null;let timerInt=null,timerLeft=0,deferredPrompt=null;
-function save(){localStorage.setItem(LS,JSON.stringify(db))}
-function user(){return db.users.find(u=>u.id===db.currentUser)}
-function clientId(){let u=user();if(!u)return null;return u.role==='coach'?(db.selectedClient||u.id):u.id}
-function client(){return db.users.find(u=>u.id===clientId())}
-function assignment(cid=clientId()){return db.assignments.find(a=>a.clientId===cid)||{week:1}}
-function week(){return assignment().week||1}
-function workoutsFor(cid=clientId()){let a=assignment(cid);return db.workouts.filter(w=>w.week===(a?.week||1))}
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;installBtn.style.display='inline-block'});installBtn.onclick=()=>deferredPrompt?.prompt();
-document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>show(t.dataset.view));
-function show(v){document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.view===v));document.querySelectorAll('.view').forEach(x=>x.classList.add('hide'));document.getElementById(v).classList.remove('hide');render()}
-function render(){let u=user();authView.classList.toggle('hide',!!u);appView.classList.toggle('hide',!u);if(!u){renderAuth();return}profileLine.textContent=`${u.name} · ${u.role==='coach'?'Coach + Athlete':'Client'} · ${client()?.name||u.name}`;renderPhaseBand();renderToday();renderProgram();renderProgress();renderCoach();renderRequests();renderSettings();}
-function renderAuth(){authView.innerHTML=`<div class="card banner"><h2>Strong Week Coach Mode</h2><p class="muted">Cloud-ready coaching app. This version runs in local demo mode until your Supabase keys are added to config.js.</p></div><div class="grid"><div class="card"><h2>Login demo</h2><button class="btn green full" onclick="loginDemo('coach-demo')">Login as Marcell Coach</button><br><br><button class="btn secondary full" onclick="loginDemo('client-demo')">Login as Demo Client</button></div><div class="card"><h2>Create account</h2><input id="suName" placeholder="Name"><input id="suEmail" placeholder="Email"><select id="suRole"><option value="client">Client</option><option value="coach">Coach</option></select><input id="suCoach" placeholder="Coach invite code, optional"><button class="btn green full" onclick="signupLocal()">Create account</button><p class="muted small">Clients create their own account. Coach invite code can be your email for now.</p></div></div>`}
-function loginDemo(id){db.currentUser=id;if(user()?.role==='coach')db.selectedClient=user().id;save();render()}
-function signupLocal(){let role=suRole.value;let coach=null;if(role==='client'){let found=db.users.find(u=>u.role==='coach'&&(u.email===suCoach.value||u.name.toLowerCase()===suCoach.value.toLowerCase()));coach=found?.id||'coach-demo'}let id=uid();db.users.push({id,name:suName.value||'New User',email:suEmail.value||`${id}@local`,role,coachId:coach});db.assignments.push({id:uid(),coachId:coach||id,clientId:id,week:1});db.currentUser=id;if(role==='coach')db.selectedClient=id;save();render()}
-function phaseHTML(ph){return `<div class="card banner"><div class="row space"><div><h2>📅 Phase ${ph.n} – ${ph.name}</h2><p class="muted">${ph.weeks}</p></div><span class="pill green">Week ${week()}</span></div><div class="grid"><div><b>Focus</b>${ph.focus.map(x=>`<p class="muted small">• ${x}</p>`).join('')}</div><div><b>How to train</b>${ph.how.map(x=>`<p class="muted small">• ${x}</p>`).join('')}</div><div><b>Goal</b>${ph.goal.map(x=>`<p class="muted small">👉 ${x}</p>`).join('')}</div></div></div>`}
-function renderPhaseBand(){phaseBand.innerHTML=phaseHTML(phaseForWeek(week()))}
-function workoutCard(w){return `<div class="card"><div class="row space"><div><h2>${w.name}</h2><span class="pill">${w.schedule}</span><span class="pill">Week ${w.week}</span><span class="pill">Phase ${w.phase}</span></div><button class="btn green" onclick="startWorkout('${w.id}')">Start</button></div>${w.sections.map(s=>`<span class="pill">${s.title} · ${s.time}</span>`).join('')}</div>`}
-function renderToday(){let day=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()];let w=workoutsFor().find(x=>x.schedule===day)||workoutsFor()[0];today.innerHTML=`<div class="card"><div class="row space"><div><h2>Today for ${client()?.name}</h2><p class="muted">Rest: main lifts 90 sec. Others 60 sec. Move with intent.</p></div></div></div>`+(w?workoutCard(w):'<div class="card">No workout assigned.</div>')}
-function renderProgram(){program.innerHTML=`<div class="card"><div class="row space"><div><h2>Assigned Program</h2><p class="muted">Client level A: clients can log, comment and request substitutions, but cannot edit plan structure.</p></div><select onchange="setWeek(this.value)">${Array.from({length:24},(_,i)=>`<option value="${i+1}" ${week()==i+1?'selected':''}>Week ${i+1}</option>`).join('')}</select></div></div>`+workoutsFor().map(workoutCard).join('')+`<div class="card"><h2>Add workout by copy and paste</h2><p class="muted">Coach only. Paste exercises in the format: Squat 4 x 6</p><input id="newWName" placeholder="Workout name"><select id="newWSchedule"><option>Monday</option><option>Wednesday</option><option>Friday</option><option>Any day</option></select><textarea id="pasteBox" placeholder="Squat 4 x 6\nBench Press 4 x 8\nBike 10 x 1"></textarea><button class="btn green full" onclick="importWorkout()" ${user().role==='client'?'disabled':''}>Create custom workout</button></div>`}
-function setWeek(v){let a=assignment();a.week=Number(v);save();render()}
-function importWorkout(){let lines=pasteBox.value.split('\n').map(x=>x.trim()).filter(Boolean);let ex=[];lines.forEach(l=>{let m=l.match(/^(.+?)\s+(\d+)\s*x\s*(\d+)/i);if(m)ex.push({id:uid(),name:m[1].trim(),sets:+m[2],reps:+m[3],unit:'reps',type:'other',rest:60,progression:'1–2 kg when top reps are clean'});});if(!ex.length)return alert('Try: Squat 4 x 6');let sections=clone(defaultSections);sections[3].exercises=ex;db.workouts.push({id:uid(),week:week(),phase:phaseForWeek(week()).n,name:newWName.value||'Custom Workout',schedule:newWSchedule.value,sections});save();render()}
-function lastExerciseLog(name,cid=clientId()){let logs=db.sessions.filter(s=>s.clientId===cid).flatMap(s=>s.exercises||[]).filter(e=>e.name===name&&e.sets?.length);return logs.at(-1)}
-function topRepsDone(log,target){if(!log)return false;return log.sets.filter(s=>s.done).every(s=>Number(s.reps)>=Number(target))}
-function suggest(e){let last=lastExerciseLog(e.name);if(!last)return {last:'No previous log',suggest:'Choose a comfortable starting weight'};let weights=last.sets.map(s=>Number(s.weight)||0).filter(Boolean), max=weights.length?Math.max(...weights):0;if(!max)return {last:'Last weight not logged',suggest:'Enter working weight today'};let inc=e.type==='main'?(phaseForWeek(week()).n>=2?2.5:1):1;let sug=topRepsDone(last,e.reps)?max+inc:max;return {last:`Last: ${max} kg`,suggest:`Suggested: ${sug} kg`}}
-function startWorkout(id){let w=db.workouts.find(x=>x.id===id);activeSession={id:uid(),clientId:clientId(),coachId:user().role==='coach'?user().id:client()?.coachId,date:new Date().toISOString(),workoutId:id,workoutName:w.name,week:w.week,phase:w.phase,notes:'',sections:w.sections.map(sec=>({...sec,exercises:sec.exercises.map(e=>({...e,sets:Array.from({length:Number(e.sets)||1},(_,i)=>({n:i+1,weight:suggest(e).suggest.match(/([0-9.]+) kg/)?.[1]||'',reps:e.reps||'',done:false}))}))}))};renderSession()}
-function renderSession(){document.querySelectorAll('.view').forEach(x=>x.classList.add('hide'));today.classList.remove('hide');today.innerHTML=`<div class="card"><div class="row space"><div><h2>${activeSession.workoutName}</h2><p class="muted">Move with intent. Tick each set to start rest timer.</p></div><button class="btn green" onclick="finishSession()">Finish Workout</button></div><div class="progressbar"><span id="bar"></span></div></div>`+activeSession.sections.map((sec,si)=>`<div class="card"><div class="sectionTitle"><div><h2>${sec.title}</h2><p class="muted small">${sec.time}</p></div></div>${sec.exercises.map((e,ei)=>{let sg=suggest(e);return `<div class="ex"><h3>${e.name}</h3><p class="muted small">${sg.last} · ${sg.suggest} · Rest ${e.rest||60}s</p><div class="sets">${e.sets.map((s,sti)=>`<div class="setrow"><div class="setnum">${sti+1}</div><input inputmode="decimal" type="number" placeholder="kg" value="${s.weight}" onchange="activeSession.sections[${si}].exercises[${ei}].sets[${sti}].weight=this.value;updateBar()"><input inputmode="numeric" type="number" placeholder="reps" value="${s.reps}" onchange="activeSession.sections[${si}].exercises[${ei}].sets[${sti}].reps=this.value;updateBar()"><button class="check ${s.done?'done':''}" onclick="toggleSet(${si},${ei},${sti})">✓</button></div>`).join('')}</div><textarea placeholder="Exercise note or comment" onchange="activeSession.sections[${si}].exercises[${ei}].comment=this.value">${e.comment||''}</textarea><button class="btn secondary full" onclick="requestSub('${e.name}')">Request substitution</button></div>`}).join('')}</div>`).join('')+`<div class="card"><h2>Health check-in</h2><div class="grid"><input id="hSleep" type="number" min="1" max="10" placeholder="Sleep 1–10"><input id="hEnergy" type="number" min="1" max="10" placeholder="Energy 1–10"><input id="hStress" type="number" min="1" max="10" placeholder="Stress 1–10"><input id="hSoreness" type="number" min="1" max="10" placeholder="Soreness 1–10"><input id="hRpe" type="number" min="1" max="10" placeholder="Session RPE 1–10"></div><textarea id="sessionNotes" placeholder="Overall notes"></textarea></div>`;updateBar()}
-function updateBar(){if(!activeSession)return;let all=activeSession.sections.flatMap(s=>s.exercises.flatMap(e=>e.sets));let done=all.filter(s=>s.done).length;let bar=document.getElementById('bar');if(bar)bar.style.width=Math.round(done/all.length*100)+'%'}
-function toggleSet(si,ei,sti){let st=activeSession.sections[si].exercises[ei].sets[sti];st.done=!st.done;if(st.done)startTimer(activeSession.sections[si].exercises[ei].rest||60);renderSession()}
-function requestSub(exName){let reason=prompt(`Substitution request for ${exName}. What would you like changed?`);if(!reason)return;db.requests.push({id:uid(),clientId:clientId(),coachId:client()?.coachId||user().id,exercise:exName,reason,status:'pending',date:new Date().toISOString()});save();alert('Request saved for coach review.')}
-function finishSession(){activeSession.notes=document.getElementById('sessionNotes')?.value||'';db.sessions.push(flattenSession(activeSession));db.health.push({id:uid(),sessionId:activeSession.id,clientId:clientId(),date:new Date().toISOString(),sleep:hSleep.value,energy:hEnergy.value,stress:hStress.value,soreness:hSoreness.value,rpe:hRpe.value});save();activeSession=null;alert('Workout saved.');show('progress')}
-function flattenSession(s){return {...s,exercises:s.sections.flatMap(sec=>sec.exercises.map(e=>({...e,section:sec.title})))} }
-function sessionVolume(s){return (s.exercises||[]).reduce((a,e)=>a+e.sets.reduce((b,st)=>b+(Number(st.weight)||0)*(Number(st.reps)||0),0),0)}
-function renderProgress(){let cid=clientId();let ss=db.sessions.filter(s=>s.clientId===cid);let sets=ss.flatMap(s=>s.exercises.flatMap(e=>e.sets)).filter(x=>x.done).length;let vol=ss.reduce((a,s)=>a+sessionVolume(s),0);progress.innerHTML=`<div class="grid"><div class="stat"><span class="muted">Workouts</span><br><b>${ss.length}</b></div><div class="stat"><span class="muted">Sets</span><br><b>${sets}</b></div><div class="stat"><span class="muted">Volume</span><br><b>${Math.round(vol)} kg</b></div></div><div class="card"><h2>Completed workouts</h2>${ss.slice().reverse().map(s=>`<div class="card"><div class="row space"><div><b>${s.workoutName}</b><br><span class="muted small">${new Date(s.date).toLocaleString()} · Week ${s.week} · ${Math.round(sessionVolume(s))} kg volume</span></div><button class="btn secondary" onclick="openSession('${s.id}')">Open</button></div></div>`).join('')||'<p class="muted">No workouts logged yet.</p>'}</div>`}
-function openSession(id){let s=db.sessions.find(x=>x.id===id);modalBody.innerHTML=`<h2>${s.workoutName}</h2><p class="muted">${new Date(s.date).toLocaleString()} · Week ${s.week} · Phase ${s.phase}</p><h3>Total volume: ${Math.round(sessionVolume(s))} kg</h3>${s.exercises.map(e=>`<div class="card"><b>${e.name}</b><br><span class="muted small">${e.section}</span>${e.sets.map(st=>`<p class="small">Set ${st.n}: ${st.weight||0} kg x ${st.reps||0} reps ${st.done?'✅':''}</p>`).join('')}${e.comment?`<p>Comment: ${e.comment}</p>`:''}</div>`).join('')}<textarea onchange="s.notes=this.value;save()">${s.notes||''}</textarea>`;modal.classList.add('show')}
-function renderCoach(){let u=user();if(u.role!=='coach'){coach.innerHTML='<div class="card"><h2>Coach Mode</h2><p class="muted">Your coach manages this area.</p></div>';return}let clients=db.users.filter(x=>x.role==='client'&&x.coachId===u.id).concat([u]);coach.innerHTML=`<div class="card"><h2>Coach Dashboard</h2><p class="muted">Select yourself or a client to view training, progress and requests.</p></div><div class="grid">${clients.map(c=>{let ss=db.sessions.filter(s=>s.clientId===c.id);return `<div class="card clientCard ${clientId()===c.id?'active':''}" onclick="db.selectedClient='${c.id}';save();render()"><h2>${c.name}</h2><span class="pill">${c.id===u.id?'My training':'Client'}</span><span class="pill">${ss.length} workouts</span><p class="muted small">Week ${assignment(c.id).week||1}</p></div>`}).join('')}</div><div class="card"><h2>Assign week for ${client()?.name}</h2><select onchange="setWeek(this.value)">${Array.from({length:24},(_,i)=>`<option value="${i+1}" ${week()==i+1?'selected':''}>Week ${i+1}</option>`).join('')}</select></div>`}
-function renderRequests(){let relevant=db.requests.filter(r=>user().role==='coach'?r.coachId===user().id:r.clientId===user().id);requests.innerHTML=`<div class="card"><h2>Substitution requests & comments</h2>${relevant.slice().reverse().map(r=>`<div class="card"><b>${r.exercise}</b><p>${r.reason}</p><span class="pill ${r.status==='approved'?'green':'warn'}">${r.status}</span>${user().role==='coach'&&r.status==='pending'?`<div class="row"><button class="btn green" onclick="setReq('${r.id}','approved')">Approve</button><button class="btn danger" onclick="setReq('${r.id}','rejected')">Reject</button></div>`:''}</div>`).join('')||'<p class="muted">No requests yet.</p>'}</div>`}
-function setReq(id,status){let r=db.requests.find(x=>x.id===id);r.status=status;save();render()}
-function renderSettings(){settings.innerHTML=`<div class="card"><h2>Account</h2><p>${user().name} · ${user().email}</p><button class="btn secondary" onclick="db.currentUser=null;save();render()">Log out</button></div><div class="card"><h2>Cloud setup</h2><p class="muted">This app is Supabase-ready. Add your Supabase URL and anon key in config.js, then use the included supabase-schema.sql to create the database.</p><p class="small">Current mode: ${db.mode}. No Polar connection yet. Health check-ins are manual and preserved for later Polar integration.</p></div><div class="card"><h2>Backup</h2><button class="btn secondary full" onclick="exportData()">Export local data</button><br><br><input type="file" onchange="importData(event)"></div><div class="card"><h2>Reset demo data</h2><button class="btn danger full" onclick="if(confirm('Reset app data?')){localStorage.removeItem(LS);location.reload()}">Reset</button></div>`}
-function startTimer(sec){clearInterval(timerInt);timerLeft=sec;timer.classList.add('show');tick();timerInt=setInterval(()=>{timerLeft--;tick();if(timerLeft<=0){clearInterval(timerInt);timer.classList.remove('show')}},1000)}
-function tick(){timerTime.textContent=`${String(Math.floor(timerLeft/60)).padStart(2,'0')}:${String(timerLeft%60).padStart(2,'0')}`}
-stopTimer.onclick=()=>{clearInterval(timerInt);timer.classList.remove('show')};plusTimer.onclick=()=>{timerLeft+=15;tick()};minusTimer.onclick=()=>{timerLeft=Math.max(0,timerLeft-15);tick()};function closeModal(){modal.classList.remove('show')}
-function exportData(){let a=document.createElement('a'),blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});a.href=URL.createObjectURL(blob);a.download='strong-week-coach-backup.json';a.click()}
-function importData(ev){let f=ev.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{db=JSON.parse(r.result);save();render()};r.readAsText(f)}
-render();
-</script>
-</body></html>
+  <div class="card">
+    <h1>Strong Week Coach Mode</h1>
+    <p>Your Supabase connection is now configured correctly.</p>
+
+    <div class="status" id="status">
+      Checking Supabase connection...
+    </div>
+
+    <button onclick="testConnection()">Test Connection</button>
+  </div>
+
+  <script>
+    const supabaseClient = window.supabase.createClient(
+      window.STRONG_WEEK_CONFIG.supabaseUrl,
+      window.STRONG_WEEK_CONFIG.supabaseAnonKey
+    );
+
+    async function testConnection() {
+      const status = document.getElementById("status");
+
+      try {
+        const { data, error } = await supabaseClient.auth.getSession();
+
+        if (error) {
+          status.innerHTML = "Supabase connected but returned an auth error.";
+          console.error(error);
+        } else {
+          status.innerHTML = "✅ Supabase connected successfully.";
+          console.log(data);
+        }
+      } catch (err) {
+        status.innerHTML = "❌ Connection failed.";
+        console.error(err);
+      }
+    }
+
+    testConnection();
+  </script>
+</body>
+</html>
