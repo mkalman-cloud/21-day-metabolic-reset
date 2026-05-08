@@ -80,10 +80,8 @@
         <input id="signupName" placeholder="Full name" />
         <input id="signupEmail" placeholder="Email" />
         <input id="signupPassword" type="password" placeholder="Password" />
-        <select id="signupRole"><option value="client">Client</option><option value="coach">Coach</option></select>
-        <input id="coachEmail" placeholder="Coach email, optional for clients" />
         <button class="green full" onclick="signup()">Create account</button>
-        <p class="muted small">Clients create their own account. Coach email links them to you after you approve/update their profile.</p>
+        <p class="muted small">Client accounts are automatically assigned to Marcell as coach.</p>
       </div>
     </div>
   </section>
@@ -123,6 +121,7 @@ const supabaseClient = window.supabase.createClient(
 );
 
 const LS = "strong_week_cloud_v4";
+const PERMANENT_COACH_EMAIL = "marcell.kalman@yahoo.com";
 let currentUser = null;
 let currentProfile = null;
 let selectedClientId = null;
@@ -182,6 +181,25 @@ function localKey(){ return `${LS}_${currentUser?.id || "guest"}`; }
 function getLocal(){ return JSON.parse(localStorage.getItem(localKey()) || '{"week":1,"sessions":[],"requests":[],"comments":[],"health":[]}'); }
 function setLocal(v){ localStorage.setItem(localKey(), JSON.stringify(v)); }
 
+function isPermanentCoachEmail(email){
+  return String(email || "").toLowerCase() === PERMANENT_COACH_EMAIL.toLowerCase();
+}
+
+async function getPermanentCoachProfile(){
+  const { data } = await supabaseClient
+    .from("profiles")
+    .select("*")
+    .eq("email", PERMANENT_COACH_EMAIL)
+    .maybeSingle();
+  return data || null;
+}
+
+function activeSessionKey(){ return `${localKey()}_active_session`; }
+function saveActiveSession(){ if(activeSession) localStorage.setItem(activeSessionKey(), JSON.stringify(activeSession)); }
+function loadActiveSession(){ activeSession = JSON.parse(localStorage.getItem(activeSessionKey()) || "null"); }
+function clearActiveSession(){ localStorage.removeItem(activeSessionKey()); }
+
+
 window.addEventListener("beforeinstallprompt", e => {
   e.preventDefault(); deferredPrompt = e; installBtn.classList.remove("hide");
 });
@@ -200,7 +218,7 @@ async function init(){
     const { data, error } = await supabaseClient.auth.getSession();
     if(error) throw error;
     currentUser = data.session?.user || null;
-    if(currentUser) await loadProfile();
+    if(currentUser) { await loadProfile(); loadActiveSession(); }
     status.innerHTML = '<h1>Strong Week</h1><p class="muted">✅ Supabase connected successfully.</p>';
     setTimeout(()=>status.classList.add("hide"), 1200);
     render();
@@ -211,28 +229,69 @@ async function init(){
 }
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
   currentUser = session?.user || null;
-  if(currentUser) await loadProfile();
+  if(currentUser) { await loadProfile(); loadActiveSession(); }
   render();
 });
 
 async function loadProfile(){
   const { data, error } = await supabaseClient.from("profiles").select("*").eq("id", currentUser.id).maybeSingle();
   if(error) console.warn(error);
-  currentProfile = data || { id: currentUser.id, role:"client", full_name: currentUser.email };
+
+  if(data){
+    currentProfile = data;
+  } else {
+    const isCoach = isPermanentCoachEmail(currentUser.email);
+    const coachProfile = isCoach ? null : await getPermanentCoachProfile();
+    const profilePayload = {
+      id: currentUser.id,
+      role: isCoach ? "coach" : "client",
+      full_name: currentUser.email,
+      email: currentUser.email,
+      coach_id: isCoach ? null : (coachProfile ? coachProfile.id : null)
+    };
+    const { data:newProfile, error:insertError } = await supabaseClient.from("profiles").insert(profilePayload).select().single();
+    if(insertError) console.warn(insertError);
+    currentProfile = newProfile || profilePayload;
+  }
+
+  if(isPermanentCoachEmail(currentUser.email) && currentProfile.role !== "coach"){
+    await supabaseClient.from("profiles").update({ role:"coach", email: currentUser.email, coach_id:null }).eq("id", currentUser.id);
+    currentProfile.role = "coach";
+    currentProfile.email = currentUser.email;
+    currentProfile.coach_id = null;
+  }
+
   selectedClientId = currentProfile.id;
 }
 async function signup(){
-  const email = signupEmail.value.trim(), password = signupPassword.value.trim(), name = signupName.value.trim();
+  const email = signupEmail.value.trim();
+  const password = signupPassword.value.trim();
+  const name = signupName.value.trim();
   if(!email || !password || !name) return alert("Add name, email and password.");
+
+  const isCoach = isPermanentCoachEmail(email);
+  const coachProfile = isCoach ? null : await getPermanentCoachProfile();
+
   const { data, error } = await supabaseClient.auth.signUp({ email, password });
   if(error) return alert(error.message);
+
   if(data.user){
-    const { error: pError } = await supabaseClient.from("profiles").insert({
-      id: data.user.id, role: signupRole.value, full_name: name
-    });
-    if(pError) alert("Account created, but profile insert needs policy check: " + pError.message);
+    const profilePayload = {
+      id: data.user.id,
+      role: isCoach ? "coach" : "client",
+      full_name: name,
+      email: email,
+      coach_id: isCoach ? null : (coachProfile ? coachProfile.id : null)
+    };
+
+    const { error: pError } = await supabaseClient.from("profiles").insert(profilePayload);
+    if(pError) {
+      alert("Account created, but profile insert needs policy check: " + pError.message);
+      return;
+    }
   }
-  alert("Account created. Check your email if confirmation is required, then log in.");
+
+  alert(isCoach ? "Coach account created. Log in." : "Client account created and assigned to Marcell. Check your email if confirmation is required, then log in.");
 }
 async function login(){
   const { error } = await supabaseClient.auth.signInWithPassword({ email: loginEmail.value.trim(), password: loginPassword.value.trim() });
@@ -259,10 +318,24 @@ function workoutForToday(){
   const day = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date().getDay()];
   return PROGRAM.find(w=>w.schedule===day) || PROGRAM[0];
 }
+
+function previewWorkout(dayName){
+  const w=PROGRAM.find(x=>x.day===dayName);
+  const sections=[...new Set(w.exercises.map(e=>e[0]))];
+  modalBody.innerHTML = `<h2>${w.day}</h2><p class="muted">${w.schedule} · Week ${currentWeek()}</p>` +
+    sections.map(sec=>`<div class="card"><h3>${sec}</h3>${w.exercises.filter(e=>e[0]===sec).map(e=>`<p><b>${e[1]}</b> · ${e[2]} x ${e[3]} ${e[4]} · ${e[5]==="main" ? "90 sec rest" : "60 sec rest"}</p>`).join("")}</div>`).join("") +
+    `<button class="green full" onclick="closeModal(); startWorkout('${w.day.replace(/'/g,"")}')">Start this workout</button>`;
+  modal.classList.add("show");
+}
+
 function workoutCard(w){
-  return `<div class="card"><div class="row space"><div><h2>${w.day}</h2><span class="pill">${w.schedule}</span><span class="pill">Week ${currentWeek()}</span></div><button class="green" onclick='startWorkout(${JSON.stringify(w.day)})'>Start</button></div>${[...new Set(w.exercises.map(e=>e[0]))].map(s=>`<span class="pill">${s}</span>`).join("")}</div>`;
+  return `<div class="card"><div class="row space"><div><h2>${w.day}</h2><span class="pill">${w.schedule}</span><span class="pill">Week ${currentWeek()}</span></div><div class="row"><button class="secondary" onclick='previewWorkout(${JSON.stringify(w.day)})'>Open</button><button class="green" onclick='startWorkout(${JSON.stringify(w.day)})'>Start</button></div></div>${[...new Set(w.exercises.map(e=>e[0]))].map(s=>`<span class="pill">${s}</span>`).join("")}</div>`;
 }
 function renderToday(){
+  if(activeSession){
+    today.innerHTML = `<div class="card banner"><div class="row space"><div><h2>Workout in progress</h2><p class="muted">${activeSession.workout} · Week ${activeSession.week}</p></div><button class="green" onclick="renderSession()">Resume workout</button></div></div>`;
+    return;
+  }
   today.innerHTML = `<div class="card"><h2>Today</h2><p class="muted">Main lifts rest 90 sec. Others rest 60 sec. Move with intent.</p></div>${workoutCard(workoutForToday())}`;
 }
 function renderProgram(){
@@ -346,6 +419,7 @@ function startWorkout(dayName){
     obj.sets=Array.from({length:obj.setsCount},(_,i)=>({n:i+1, weight:sw, reps:startSecondaryValue(obj), done:false}));
     return obj;
   }), notes:""};
+  saveActiveSession();
   renderSession();
 }
 function renderSession(){
@@ -355,17 +429,17 @@ function renderSession(){
   today.innerHTML = `<div class="card"><div class="row space"><div><h2>${activeSession.workout}</h2><p class="muted">Tick each set to start rest timer.</p></div><button class="green" onclick="finishWorkout()">Finish Workout</button></div></div>` +
   sections.map(sec=>`<div class="card"><h2>${sec}</h2>${activeSession.exercises.filter(e=>e.section===sec).map((e,ei)=>{
     const realIndex=activeSession.exercises.indexOf(e); const sg=suggest(e);
-    return `<div class="exercise"><h3>${e.name}</h3><p class="small muted">${sg.last} · ${sg.suggested} · Rest ${e.rest}s</p>${e.sets.map((s,si)=>`<div class="setrow"><div class="n">${si+1}</div><input ${isBodyweightExercise(e) ? 'readonly' : 'type="number"'} placeholder="${primaryMetricLabel(e)}" value="${s.weight}" onchange="activeSession.exercises[${realIndex}].sets[${si}].weight=this.value"><input type="number" placeholder="${secondaryMetricLabel(e)}" value="${s.reps}" onchange="activeSession.exercises[${realIndex}].sets[${si}].reps=this.value"><button class="check ${s.done?"done":""}" onclick="toggleSet(${realIndex},${si})">✓</button></div>`).join("")}<textarea placeholder="Exercise notes/comments" onchange="activeSession.exercises[${realIndex}].comment=this.value">${e.comment||""}</textarea><button class="secondary full" onclick="requestSub('${e.name.replace(/'/g,"")}')">Request substitution</button></div>`;
+    return `<div class="exercise"><h3>${e.name}</h3><p class="small muted">${sg.last} · ${sg.suggested} · Rest ${e.rest}s</p>${e.sets.map((s,si)=>`<div class="setrow"><div class="n">${si+1}</div><input ${isBodyweightExercise(e) ? 'readonly' : 'type="number"'} placeholder="${primaryMetricLabel(e)}" value="${s.weight}" onchange="activeSession.exercises[${realIndex}].sets[${si}].weight=this.value; saveActiveSession()"><input type="number" placeholder="${secondaryMetricLabel(e)}" value="${s.reps}" onchange="activeSession.exercises[${realIndex}].sets[${si}].reps=this.value; saveActiveSession()"><button class="check ${s.done?"done":""}" onclick="toggleSet(${realIndex},${si})">✓</button></div>`).join("")}<textarea placeholder="Exercise notes/comments" onchange="activeSession.exercises[${realIndex}].comment=this.value; saveActiveSession()">${e.comment||""}</textarea><button class="secondary full" onclick="requestSub('${e.name.replace(/'/g,"")}')">Request substitution</button></div>`;
   }).join("")}</div>`).join("") +
   `<div class="card"><h2>Health check-in</h2><div class="grid"><input id="sleep" type="number" placeholder="Sleep 1-10"><input id="energy" type="number" placeholder="Energy 1-10"><input id="stress" type="number" placeholder="Stress 1-10"><input id="soreness" type="number" placeholder="Soreness 1-10"><input id="rpe" type="number" placeholder="RPE 1-10"></div><textarea id="sessionNotes" placeholder="Overall notes"></textarea></div>`;
 }
-function toggleSet(ei,si){ const s=activeSession.exercises[ei].sets[si]; s.done=!s.done; if(s.done) startTimer(activeSession.exercises[ei].rest); renderSession(); }
+function toggleSet(ei,si){ const s=activeSession.exercises[ei].sets[si]; s.done=!s.done; saveActiveSession(); if(s.done) startTimer(activeSession.exercises[ei].rest); renderSession(); }
 function finishWorkout(){
   activeSession.notes=document.getElementById("sessionNotes")?.value||"";
   const d=getLocal();
   d.sessions.push(activeSession);
   d.health.push({ sessionId:activeSession.id, date:new Date().toISOString(), sleep:sleep.value, energy:energy.value, stress:stress.value, soreness:soreness.value, rpe:rpe.value });
-  setLocal(d); saveSessionCloud(activeSession); activeSession=null; alert("Workout saved."); show("progress");
+  setLocal(d); saveSessionCloud(activeSession); clearActiveSession(); activeSession=null; alert("Workout saved."); show("progress");
 }
 async function saveSessionCloud(s){
   try {
@@ -385,9 +459,28 @@ function openSession(id){
   modalBody.innerHTML=`<h2>${s.workout}</h2><p class="muted">${new Date(s.date).toLocaleString()} · Week ${s.week}</p>${s.exercises.map(e=>`<div class="card"><b>${e.name}</b><p class="small muted">${e.section}</p>${e.sets.map(set=>`<p>Set ${set.n}: ${displaySetLine(e,set)} ${set.done?"✅":""}</p>`).join("")}${e.comment?`<p>Comment: ${e.comment}</p>`:""}</div>`).join("")}`;
   modal.classList.add("show");
 }
-function renderCoach(){
-  if(currentProfile.role!=="coach"){ coach.innerHTML="<div class='card'><h2>Coach Mode</h2><p class='muted'>Your coach manages this area.</p></div>"; return; }
-  coach.innerHTML=`<div class="card"><h2>Coach Dashboard</h2><p class="muted">This is the first cloud-ready coach screen. Client linking is the next upgrade.</p></div><div class="card"><h2>My Training</h2><p class="muted">You can train under your own coach account and later manage clients here.</p></div>`;
+async function renderCoach(){
+  if(currentProfile.role!=="coach"){
+    coach.innerHTML="<div class='card'><h2>Coach Mode</h2><p class='muted'>Your coach manages this area.</p></div>";
+    return;
+  }
+
+  const { data:clients, error } = await supabaseClient
+    .from("profiles")
+    .select("*")
+    .eq("coach_id", currentProfile.id)
+    .order("full_name", { ascending:true });
+
+  if(error){
+    coach.innerHTML=`<div class="card"><h2>Coach Dashboard</h2><p class="muted">Could not load clients: ${error.message}</p></div>`;
+    return;
+  }
+
+  coach.innerHTML=`<div class="card"><h2>Coach Dashboard</h2><p class="muted">Permanent coach: ${PERMANENT_COACH_EMAIL}. New clients are automatically assigned to you.</p></div>
+  <div class="grid">
+    <div class="card"><h2>My Training</h2><p class="muted">Use Today and Program tabs for your own training.</p></div>
+    ${(clients||[]).map(c=>`<div class="card"><h2>${c.full_name || c.email || "Client"}</h2><p class="muted">${c.email || ""}</p><span class="pill green">Assigned to you</span></div>`).join("") || "<div class='card'><p class='muted'>No clients yet.</p></div>"}
+  </div>`;
 }
 function requestSub(name){
   const reason=prompt(`Request substitution for ${name}. What would you like changed?`);
