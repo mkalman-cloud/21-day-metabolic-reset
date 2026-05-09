@@ -147,8 +147,13 @@ async function setupAuthListener(){
   if(!supabaseClient) return;
   supabaseClient.auth.onAuthStateChange(async (event, session)=>{
     try{
-      currentUser = session?.user || null;
-      if(currentUser){ await loadProfile(); loadActive(); }
+      console.log("Auth state changed:", event);
+      currentUser = session?.user || currentUser || null;
+      if(currentUser){
+        await loadProfile();
+        loadActive();
+        activeView = activeView || "today";
+      }
       render();
     }catch(err){
       console.error("Auth profile error", err);
@@ -184,16 +189,51 @@ async function loadProfile(){
 async function login(){
   try{
     console.log("Login button pressed");
+
     const email=el("loginEmail").value.trim();
     const password=el("loginPassword").value.trim();
-    if(!email || !password) return alert("Please enter email and password.");
+
+    if(!email || !password){
+      alert("Please enter email and password.");
+      return;
+    }
+
     el("loginBtn").textContent = "Logging in...";
-    const { error } = await supabaseClient.auth.signInWithPassword({email,password});
+
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+    if(error){
+      el("loginBtn").textContent = "Log in";
+      alert(error.message);
+      return;
+    }
+
+    currentUser = data.user;
+
+    if(!currentUser){
+      const sessionResult = await supabaseClient.auth.getSession();
+      currentUser = sessionResult.data.session?.user || null;
+    }
+
+    if(!currentUser){
+      el("loginBtn").textContent = "Log in";
+      alert("Login succeeded, but no user session was returned. Please refresh and try again.");
+      return;
+    }
+
+    await loadProfile();
+    loadActive();
+
     el("loginBtn").textContent = "Log in";
-    if(error) return alert(error.message);
+    setStatus("Forge Cloud connected.");
+    hideStatus();
+
+    activeView = "today";
+    render();
+
   }catch(err){
     el("loginBtn").textContent = "Log in";
-    console.error(err);
+    console.error("Login error:", err);
     alert("Login error: " + (err.message || err));
   }
 }
