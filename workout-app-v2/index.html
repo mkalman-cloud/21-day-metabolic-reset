@@ -2,698 +2,289 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#020817" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="Forge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Forge</title>
-
+  <meta name="theme-color" content="#020817" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
-
   <style>
-    :root {
-      --bg:#020817; --card:#0f172a; --card2:#111827; --line:#26344d;
-      --text:#f8fafc; --muted:#94a3b8; --green:#34d399; --blue:#60a5fa;
-      --purple:#7c3aed; --red:#fb7185; --yellow:#facc15;
-    }
+    :root{--bg:#020817;--card:#0f172a;--line:#26344d;--text:#f8fafc;--muted:#94a3b8;--green:#34d399;--blue:#60a5fa}
     *{box-sizing:border-box}
     body{margin:0;background:radial-gradient(circle at top,#172554,#020817 55%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;min-height:100vh}
-    header{position:sticky;top:0;z-index:10;background:rgba(2,8,23,.86);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.08)}
-    .top{max-width:1120px;margin:auto;padding:14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
-    .brand{display:flex;align-items:center;gap:12px}
+    header{background:rgba(2,8,23,.9);border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;z-index:9}
+    .top{max-width:1120px;margin:auto;padding:14px;display:flex;gap:12px;align-items:center}
     .logo{width:46px;height:46px;border-radius:16px;background:linear-gradient(135deg,#60a5fa,#8b5cf6);display:grid;place-items:center;font-weight:900}
-    h1,h2,h3{margin:0 0 8px}
-    .sub{color:var(--muted);font-size:13px}
+    h1,h2,h3{margin:0 0 10px}.sub,.muted{color:var(--muted)}
     main{max-width:1120px;margin:auto;padding:16px}
     .card{background:linear-gradient(180deg,rgba(15,23,42,.96),rgba(17,24,39,.96));border:1px solid rgba(255,255,255,.09);border-radius:22px;padding:18px;margin-bottom:14px;box-shadow:0 18px 50px rgba(0,0,0,.35)}
     .banner{background:linear-gradient(135deg,#1e3a8a,#312e81)}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
-    .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.space{justify-content:space-between}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
     input,select,textarea{width:100%;background:#07111f;border:1px solid var(--line);border-radius:14px;padding:13px;color:var(--text);font:inherit;margin-bottom:8px}
-    textarea{min-height:90px}
     button{border:0;border-radius:14px;padding:12px 15px;font-weight:800;cursor:pointer;background:var(--blue);color:#06101f}
-    button.green{background:var(--green)} button.secondary{background:#1f2937;color:var(--text);border:1px solid var(--line)}
-    button.red{background:#3b1220;color:#fecdd3;border:1px solid #7f1d1d} button.full{width:100%}
+    .green{background:var(--green)}.secondary{background:#1f2937;color:white;border:1px solid var(--line)}.full{width:100%}
     .tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px}
-    .tab{background:#111827;color:var(--muted);border:1px solid var(--line)}.tab.active{background:var(--text);color:#020817}
-    .pill{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:var(--muted);font-size:12px;margin:2px;background:#07111f}
-    .pill.green{color:#bbf7d0;border-color:#14532d}.pill.yellow{color:#fde68a;border-color:#713f12}
-    .muted{color:var(--muted)}.small{font-size:12px}.hide{display:none!important}
-    .section{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
-    .exercise{border:1px solid var(--line);border-radius:18px;padding:14px;margin:10px 0;background:#08111f}
-    .setrow{display:grid;grid-template-columns:36px 1fr 1fr 44px;gap:8px;margin:8px 0;align-items:center}
-    .setrow .n{text-align:center;color:var(--muted)} .check{height:44px;background:#172033;color:white;border:1px solid var(--line)}
-    .check.done{background:var(--green);color:#052014}
-    .timer{position:fixed;left:14px;right:14px;bottom:14px;background:#0f172a;border:1px solid var(--line);border-radius:22px;padding:14px;display:none;z-index:50}
-    .timer.show{display:block}.time{font-size:34px;font-weight:900}
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:flex-end;z-index:40}.modal.show{display:flex}
-    .sheet{width:100%;max-width:800px;margin:0 auto;background:#0f172a;border:1px solid var(--line);border-radius:24px 24px 0 0;padding:16px;max-height:85vh;overflow:auto}
-    @media(max-width:700px){.tabs{grid-template-columns:repeat(3,1fr)}main{padding:12px}.setrow{grid-template-columns:30px 1fr 1fr 40px}}
+    .tab{background:#111827;color:var(--muted);border:1px solid var(--line)}.tab.active{background:white;color:#020817}
+    .hide{display:none!important}.pill{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:var(--muted);font-size:12px;margin:3px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.space{justify-content:space-between}.small{font-size:12px}
+    .exercise{border:1px solid var(--line);border-radius:16px;padding:12px;margin:10px 0;background:#08111f}
+    .setrow{display:grid;grid-template-columns:40px 1fr 1fr 50px;gap:8px;margin:8px 0;align-items:center}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:flex-end;z-index:40}.modal.show{display:flex}
+    .sheet{width:100%;max-width:850px;margin:0 auto;background:#0f172a;border:1px solid var(--line);border-radius:24px 24px 0 0;padding:16px;max-height:85vh;overflow:auto}
+    @media(max-width:760px){.tabs{grid-template-columns:repeat(3,1fr)}.setrow{grid-template-columns:32px 1fr 1fr 42px}}
   </style>
 </head>
 <body>
-<header>
-  <div class="top">
-    <div class="brand">
-      <div class="logo">F</div>
-      <div><h2>Move With Intent</h2><div class="sub" id="profileLine">Forge Cloud</div></div>
-    </div>
-    <button id="installBtn" class="secondary hide">Install</button>
-  </div>
-</header>
-
+<header><div class="top"><div class="logo">F</div><div><h2>Move With Intent</h2><div class="sub" id="profileLine">Forge Cloud</div></div></div></header>
 <main>
   <div id="status" class="card banner"><h1>Forge</h1><p class="muted">Syncing Forge Cloud...</p></div>
 
-  <section id="authView" class="hide">
+  <section id="authView">
     <div class="grid">
       <div class="card">
         <h2>Log in</h2>
-        <input id="loginEmail" placeholder="Email" />
-        <input id="loginPassword" type="password" placeholder="Password" />
-        <button id="loginBtn" type="button" class="green full">Log in</button>
+        <input id="loginEmail" placeholder="Email" autocomplete="email">
+        <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password">
+        <button id="loginBtn" class="green full" type="button">Log in</button>
       </div>
       <div class="card">
         <h2>Create account</h2>
-        <input id="signupName" placeholder="Full name" />
-        <input id="signupEmail" placeholder="Email" />
-        <input id="signupPassword" type="password" placeholder="Password" />
-        <input id="signupDob" type="date" placeholder="Date of birth" />
-        <input id="signupEmergencyName" placeholder="Emergency contact name" />
-        <input id="signupEmergencyPhone" placeholder="Emergency contact phone" />
-        <button id="signupBtn" type="button" class="green full">Create account</button>
+        <input id="signupName" placeholder="Full name">
+        <input id="signupEmail" placeholder="Email">
+        <input id="signupPassword" type="password" placeholder="Password">
+        <input id="signupDob" type="date" placeholder="Date of birth">
+        <input id="signupEmergencyName" placeholder="Emergency contact name">
+        <input id="signupEmergencyPhone" placeholder="Emergency contact phone">
+        <button id="signupBtn" class="green full" type="button">Create account</button>
         <p class="muted small">Client accounts are automatically assigned to Marcell as coach.</p>
       </div>
     </div>
   </section>
 
   <section id="appView" class="hide">
-    <div class="tabs" id="tabs"></div>
+    <div id="tabs" class="tabs"></div>
     <div id="phaseBand"></div>
     <div id="today" class="view"></div>
     <div id="program" class="view hide"></div>
     <div id="progress" class="view hide"></div>
-    <div id="coach" class="view hide"></div>
+    <div id="clients" class="view hide"></div>
     <div id="requests" class="view hide"></div>
     <div id="settings" class="view hide"></div>
   </section>
 </main>
 
-<div class="timer" id="timer">
-  <div class="row space">
-    <div><div class="muted small">Rest timer · Move with intent</div><div class="time" id="timerTime">01:30</div></div>
-    <div class="row"><button class="secondary" onclick="adjustTimer(-15)">-15s</button><button onclick="adjustTimer(15)">+15s</button><button class="red" onclick="stopTimer()">Stop</button></div>
-  </div>
-</div>
-
-<div class="modal" id="modal"><div class="sheet"><div id="modalBody"></div><button class="secondary full" onclick="closeModal()">Close</button></div></div>
+<div id="modal" class="modal"><div class="sheet"><div id="modalBody"></div><button class="secondary full" onclick="closeModal()">Close</button></div></div>
 
 <script>
-const supabaseClient = window.supabase.createClient(
-  window.STRONG_WEEK_CONFIG.supabaseUrl,
-  window.STRONG_WEEK_CONFIG.supabaseAnonKey
-);
-
-function setStatus(message, isError=false){
-  status.innerHTML = `<h1>Forge</h1><p class="muted">${isError ? "❌ " : "✅ "}${message}</p>`;
-}
-
-function hideStatusSoon(){
-  setTimeout(() => { if(status) status.classList.add("hide"); }, 700);
-}
-
-const LS = "strong_week_cloud_v4";
 const PERMANENT_COACH_EMAIL = "marcell.fitness@gmail.com";
+const LS = "forge_app_v1";
+
+let supabaseClient = null;
 let currentUser = null;
 let currentProfile = null;
-let selectedClientId = null;
+let activeView = "today";
 let activeSession = null;
-let timerLeft = 0;
-let timerInterval = null;
-let deferredPrompt = null;
 
-const PHASES = [
-  { n:1, name:"Foundation", weeks:"Weeks 1–6", focus:["Technique","Control","Build base conditioning"], how:["Main lifts: 5 x 5 moderate weight","Leave 2–3 reps in reserve","Conditioning: steady pace"], goal:["Feel confident, not destroyed","Build consistency"] },
-  { n:2, name:"Strength Build", weeks:"Weeks 7–12", focus:["Progressive overload","Strength increase"], how:["Add 2.5–5 kg weekly to main lifts","Push closer to failure, 1–2 reps left","Conditioning slightly harder"], goal:["Noticeable strength gains","Muscles starting to show more"] },
-  { n:3, name:"Intensification", weeks:"Weeks 13–18", focus:["Heavier weights","More intensity","Power output"], how:["Main lifts: 4 x 4 heavier","Last set hard but clean","Drive and speed in movements"], goal:["Feel strong and powerful","Big jump in performance"] },
-  { n:4, name:"Performance + Athletic Look", weeks:"Weeks 19–24", focus:["Strength + conditioning together","Lean, athletic physique"], how:["Main lifts: 3–5 sets heavy but clean","Slightly reduce rest time","Conditioning becomes sharper"], goal:["Look and feel athletic","Strong + conditioned together"] }
+function el(id){ return document.getElementById(id); }
+function setStatus(text, ok=true){ el("status").innerHTML = `<h1>Forge</h1><p class="muted">${ok ? "✅ " : "❌ "}${text}</p>`; }
+function hideStatus(){ setTimeout(()=>el("status").classList.add("hide"), 900); }
+function isCoachEmail(email){ return String(email||"").toLowerCase() === PERMANENT_COACH_EMAIL.toLowerCase(); }
+function localKey(){ return `${LS}_${currentUser?.id || "guest"}`; }
+function getStore(){ return JSON.parse(localStorage.getItem(localKey()) || '{"week":1,"sessions":[],"requests":[]}'); }
+function setStore(v){ localStorage.setItem(localKey(), JSON.stringify(v)); }
+function saveActive(){ if(activeSession) localStorage.setItem(localKey()+"_active", JSON.stringify(activeSession)); }
+function loadActive(){ activeSession = JSON.parse(localStorage.getItem(localKey()+"_active") || "null"); }
+function clearActive(){ localStorage.removeItem(localKey()+"_active"); }
+
+const PHASES=[
+  {name:"Foundation",weeks:"Weeks 1-6",focus:["Technique","Control","Build base conditioning"],how:["Main lifts: 5 x 5 moderate weight","Leave 2-3 reps in reserve","Conditioning: steady pace"],goal:["Feel confident, not destroyed","Build consistency"]},
+  {name:"Strength Build",weeks:"Weeks 7-12",focus:["Progressive overload","Strength increase"],how:["Add 2.5-5 kg weekly to main lifts","Push closer to failure","Conditioning slightly harder"],goal:["Noticeable strength gains","Muscles starting to show more"]},
+  {name:"Intensification",weeks:"Weeks 13-18",focus:["Heavier weights","More intensity","Power output"],how:["Main lifts: 4 x 4 heavier","Last set hard but clean","Drive and speed"],goal:["Feel powerful","Performance jump"]},
+  {name:"Performance + Athletic Look",weeks:"Weeks 19-24",focus:["Strength + conditioning","Lean athletic physique"],how:["Heavy but clean sets","Slightly reduce rest","Sharper conditioning"],goal:["Look and feel athletic","Strong and conditioned"]}
 ];
 
-const PROGRAM = [
-  { day:"Day 1 – Lower Body Strength + Engine", schedule:"Monday", exercises:[
-    ["Warm-Up","Incline treadmill walk",1,5,"min","incline"],
-    ["Warm-Up","Bodyweight squats",1,15,"reps","bodyweight"],
-    ["Warm-Up","Lunges",1,10,"each leg","bodyweight"],
-    ["Main Lift","Barbell Squat",5,5,"reps","main"],
-    ["Secondary","Romanian Deadlift",3,8,"reps","other"],
-    ["Secondary","Leg Press",3,10,"reps","other"],
-    ["Functional","Walking Lunges (DB)",3,10,"each leg","other"],
-    ["Functional","Leg Curl",3,12,"reps","other"],
-    ["Conditioning","Incline treadmill walk, steady moderate effort",1,12,"min","incline"],
-    ["Finisher / Cool Down","Plank",2,60,"seconds","duration_bodyweight"]
+const PROGRAM=[
+  {day:"Day 1 - Lower Body Strength + Engine",schedule:"Monday",exercises:[
+    ["Warm-Up","Incline treadmill walk",1,5,"min","incline"],["Warm-Up","Bodyweight squats",1,15,"reps","bodyweight"],["Warm-Up","Lunges",1,10,"each leg","bodyweight"],
+    ["Main Lift","Barbell Squat",5,5,"reps","main"],["Secondary","Romanian Deadlift",3,8,"reps","other"],["Secondary","Leg Press",3,10,"reps","other"],
+    ["Functional","Walking Lunges (DB)",3,10,"each leg","other"],["Functional","Leg Curl",3,12,"reps","other"],["Conditioning","Incline treadmill walk, steady moderate effort",1,12,"min","incline"],["Finisher / Cool Down","Plank",2,60,"seconds","duration_bodyweight"]
   ]},
-  { day:"Day 2 – Upper Body Strength + Work Capacity", schedule:"Wednesday", exercises:[
-    ["Warm-Up","Row machine",1,5,"min","duration"],
-    ["Warm-Up","Band pull-aparts",1,15,"reps","bodyweight"],
-    ["Main Lift","Bench Press",5,5,"reps","main"],
-    ["Secondary","Lat Pulldown or Pull-ups",3,10,"reps","other"],
-    ["Secondary","Seated Row",3,10,"reps","other"],
-    ["Functional","Dumbbell Shoulder Press",3,10,"reps","other"],
-    ["Functional","Triceps Pushdown",3,12,"reps","other"],
-    ["Conditioning","Bike steady pace, heart rate in green zone",1,12,"min","duration"],
-    ["Finisher / Cool Down","Farmer’s Carry, heavy",3,40,"m","other"]
+  {day:"Day 2 - Upper Body Strength + Work Capacity",schedule:"Wednesday",exercises:[
+    ["Warm-Up","Row machine",1,5,"min","duration"],["Warm-Up","Band pull-aparts",1,15,"reps","bodyweight"],["Main Lift","Bench Press",5,5,"reps","main"],
+    ["Secondary","Lat Pulldown or Pull-ups",3,10,"reps","other"],["Secondary","Seated Row",3,10,"reps","other"],["Functional","Dumbbell Shoulder Press",3,10,"reps","other"],
+    ["Functional","Triceps Pushdown",3,12,"reps","other"],["Conditioning","Bike steady pace, heart rate in green zone",1,12,"min","duration"]
   ]},
-  { day:"Day 3 – Full Body Strength + Conditioning", schedule:"Friday", exercises:[
-    ["Warm-Up","Row machine",1,5,"min","duration"],
-    ["Warm-Up","Dynamic hip mobility",1,1,"min each leg","duration"],
-    ["Main Lift","Deadlift",5,5,"reps","main"],
-    ["Power","Push Press",3,6,"reps","other"],
-    ["Power","Step-Ups",3,8,"reps","other"],
-    ["Functional","Walking Lunges",3,10,"each leg","bodyweight"],
-    ["Functional","Cable Woodchoppers",3,12,"each side","other"],
-    ["Conditioning","Treadmill intervals, 1 min run / 1 min walk",8,1,"round","speed"],
-    ["Finisher / Cool Down","Push-ups",2,12,"reps","bodyweight"],
-    ["Finisher / Cool Down","Plank",1,60,"seconds","duration_bodyweight"]
+  {day:"Day 3 - Full Body Strength + Conditioning",schedule:"Friday",exercises:[
+    ["Warm-Up","Row machine",1,5,"min","duration"],["Warm-Up","Dynamic hip mobility",1,1,"min each leg","duration"],["Main Lift","Deadlift",5,5,"reps","main"],
+    ["Power","Push Press",3,6,"reps","other"],["Power","Step-Ups",3,8,"reps","other"],["Functional","Walking Lunges",3,10,"each leg","bodyweight"],
+    ["Functional","Cable Woodchoppers",3,12,"each side","other"],["Conditioning","Treadmill intervals, 1 min run / 1 min walk",8,1,"round","speed"],["Finisher / Cool Down","Push-ups",2,12,"reps","bodyweight"],["Finisher / Cool Down","Plank",1,60,"seconds","duration_bodyweight"]
   ]}
 ];
 
-function phaseForWeek(w){ return PHASES[Math.min(3, Math.floor((Number(w)-1)/6))]; }
-function uuid(){ return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2); }
-function localKey(){ return `${LS}_${currentUser?.id || "guest"}`; }
-function getLocal(){ return JSON.parse(localStorage.getItem(localKey()) || '{"week":1,"sessions":[],"requests":[],"comments":[],"health":[]}'); }
-function setLocal(v){ localStorage.setItem(localKey(), JSON.stringify(v)); }
-
-function isPermanentCoachEmail(email){
-  return String(email || "").toLowerCase() === PERMANENT_COACH_EMAIL.toLowerCase();
-}
-
-async function getPermanentCoachProfile(){
-  const { data } = await supabaseClient
-    .from("profiles")
-    .select("*")
-    .eq("email", PERMANENT_COACH_EMAIL)
-    .maybeSingle();
-  return data || null;
-}
-
-function activeSessionKey(){ return `${localKey()}_active_session`; }
-function saveActiveSession(){ if(activeSession) localStorage.setItem(activeSessionKey(), JSON.stringify(activeSession)); }
-function loadActiveSession(){ activeSession = JSON.parse(localStorage.getItem(activeSessionKey()) || "null"); }
-function clearActiveSession(){ localStorage.removeItem(activeSessionKey()); }
-
-
-window.addEventListener("beforeinstallprompt", e => {
-  e.preventDefault(); deferredPrompt = e; installBtn.classList.remove("hide");
-});
-installBtn.onclick = () => deferredPrompt?.prompt();
-
-
-function renderTabs(){
-  const tabsEl = document.getElementById("tabs");
-  if(!tabsEl) return;
-
-  const activeView = document.querySelector(".view:not(.hide)")?.id || "today";
-  const items = currentProfile?.role === "coach"
-    ? [["today","Today"],["program","Program"],["progress","Progress"],["coach","Clients"],["requests","Requests"],["settings","Settings"]]
-    : [["today","Today"],["program","Program"],["progress","Progress"],["requests","Requests"],["settings","Settings"]];
-
-  tabsEl.innerHTML = items.map(([view,label]) =>
-    `<button class="tab ${view === activeView ? "active" : ""}" data-view="${view}" onclick="show('${view}')">${label}</button>`
-  ).join("");
-}
-
-function show(view){
-  if(view === "coach" && currentProfile?.role !== "coach") view = "today";
-  if(currentProfile?.role === "client" && !clientProfileComplete() && view !== "settings") view = "settings";
-
-  document.querySelectorAll(".tab").forEach(t => {
-    t.classList.toggle("active", t.dataset.view === view);
-  });
-
-  document.querySelectorAll(".view").forEach(v => v.classList.add("hide"));
-
-  const target = document.getElementById(view);
-  if(target) target.classList.remove("hide");
-
-  render();
-}
-
 async function init(){
-  try {
-    // Always show the login screen first so the app never gets stuck on loading.
-    authView.classList.remove("hide");
-    appView.classList.add("hide");
-    setStatus("Syncing Forge Cloud...");
+  try{
+    if(!window.STRONG_WEEK_CONFIG) throw new Error("Missing config.js values.");
+    supabaseClient = window.supabase.createClient(window.STRONG_WEEK_CONFIG.supabaseUrl, window.STRONG_WEEK_CONFIG.supabaseAnonKey);
 
-    const result = await supabaseClient.auth.getSession();
-    if(result.error) throw result.error;
+    el("loginBtn").onclick = login;
+    el("signupBtn").onclick = signup;
 
-    currentUser = result.data.session?.user || null;
-
-    if(currentUser) {
-      await loadProfile();
-      loadActiveSession();
-      setStatus("Forge Cloud connected.");
-      hideStatusSoon();
-      render();
-      return;
-    }
-
-    setStatus("Forge Cloud ready. Please log in.");
-    hideStatusSoon();
+    const { data, error } = await supabaseClient.auth.getSession();
+    if(error) throw error;
+    currentUser = data.session?.user || null;
+    if(currentUser){ await loadProfile(); loadActive(); }
+    setStatus("Forge Cloud ready.");
+    hideStatus();
     render();
-  } catch(err) {
-    console.error("Forge init error:", err);
-    setStatus(err.message || String(err), true);
-    authView.classList.remove("hide");
-    appView.classList.add("hide");
+  }catch(err){
+    console.error(err);
+    setStatus(err.message || String(err), false);
+    el("authView").classList.remove("hide");
   }
 }
-supabaseClient.auth.onAuthStateChange(async (event, session) => {
-  try {
-    currentUser = session?.user || null;
-    if(currentUser) {
-      await loadProfile();
-      loadActiveSession();
+
+supabaseClient?.auth?.onAuthStateChange?.(()=>{});
+
+async function setupAuthListener(){
+  if(!supabaseClient) return;
+  supabaseClient.auth.onAuthStateChange(async (event, session)=>{
+    try{
+      currentUser = session?.user || null;
+      if(currentUser){ await loadProfile(); loadActive(); }
+      render();
+    }catch(err){
+      console.error("Auth profile error", err);
+      alert("Login worked, but profile loading failed: " + (err.message || err));
     }
-    render();
-  } catch(err) {
-    console.error("Auth state error:", err);
-    alert("Login worked, but profile loading needs attention: " + (err.message || err));
-  }
-});
+  });
+}
+
+async function getCoachProfile(){
+  const { data } = await supabaseClient.from("profiles").select("*").eq("email", PERMANENT_COACH_EMAIL).maybeSingle();
+  return data;
+}
 
 async function loadProfile(){
   const { data, error } = await supabaseClient.from("profiles").select("*").eq("id", currentUser.id).maybeSingle();
   if(error) console.warn(error);
-
   if(data){
     currentProfile = data;
-  } else {
-    const isCoach = isPermanentCoachEmail(currentUser.email);
-    const coachProfile = isCoach ? null : await getPermanentCoachProfile();
-    const profilePayload = {
-      id: currentUser.id,
-      role: isCoach ? "coach" : "client",
-      full_name: currentUser.email,
-      email: currentUser.email,
-      coach_id: isCoach ? null : (coachProfile ? coachProfile.id : null),
-      date_of_birth: null,
-      emergency_contact_name: "",
-      emergency_contact_phone: ""
-    };
-    const { data:newProfile, error:insertError } = await supabaseClient.from("profiles").insert(profilePayload).select().single();
+  }else{
+    const isCoach = isCoachEmail(currentUser.email);
+    const coach = isCoach ? null : await getCoachProfile();
+    const payload={id:currentUser.id,email:currentUser.email,full_name:currentUser.email,role:isCoach?"coach":"client",coach_id:isCoach?null:(coach?.id||null),date_of_birth:null,emergency_contact_name:"",emergency_contact_phone:""};
+    const { data:newP, error:insertError } = await supabaseClient.from("profiles").insert(payload).select().single();
     if(insertError) console.warn(insertError);
-    currentProfile = newProfile || profilePayload;
+    currentProfile = newP || payload;
   }
-
-  if(isPermanentCoachEmail(currentUser.email) && currentProfile.role !== "coach"){
-    await supabaseClient.from("profiles").update({ role:"coach", email: currentUser.email, coach_id:null }).eq("id", currentUser.id);
-    currentProfile.role = "coach";
-    currentProfile.email = currentUser.email;
-    currentProfile.coach_id = null;
+  if(isCoachEmail(currentUser.email) && currentProfile.role !== "coach"){
+    await supabaseClient.from("profiles").update({role:"coach",email:currentUser.email,coach_id:null}).eq("id",currentUser.id);
+    currentProfile.role="coach"; currentProfile.coach_id=null; currentProfile.email=currentUser.email;
   }
-
-  selectedClientId = currentProfile.id;
 }
-async function signup(){
-  const email = signupEmail.value.trim();
-  const password = signupPassword.value.trim();
-  const name = signupName.value.trim();
-  const dob = signupDob.value || null;
-  const emergencyName = signupEmergencyName.value.trim();
-  const emergencyPhone = signupEmergencyPhone.value.trim();
 
-  if(!email || !password || !name) return alert("Add name, email and password.");
-
-  const isCoach = isPermanentCoachEmail(email);
-
-  if(!isCoach){
-    if(!dob || !emergencyName || !emergencyPhone){
-      return alert("Clients must add date of birth, emergency contact name, and emergency contact phone before creating an account.");
-    }
-
-    if(name.trim().toLowerCase() === emergencyName.trim().toLowerCase()){
-      return alert("Emergency contact cannot be the same person as the client. Please add a different emergency contact.");
-    }
-  }
-
-  const coachProfile = isCoach ? null : await getPermanentCoachProfile();
-
-  const { data, error } = await supabaseClient.auth.signUp({ email, password });
-  if(error) return alert(error.message);
-
-  if(data.user){
-    const profilePayload = {
-      id: data.user.id,
-      role: isCoach ? "coach" : "client",
-      full_name: name,
-      email: email,
-      coach_id: isCoach ? null : (coachProfile ? coachProfile.id : null),
-      date_of_birth: isCoach ? null : dob,
-      emergency_contact_name: isCoach ? "" : emergencyName,
-      emergency_contact_phone: isCoach ? "" : emergencyPhone
-    };
-
-    const { error: pError } = await supabaseClient.from("profiles").insert(profilePayload);
-    if(pError) {
-      alert("Account created, but profile insert needs policy check: " + pError.message);
-      return;
-    }
-  }
-
-  alert(isCoach ? "Coach account created. Log in." : "Client account created and assigned to Marcell. Check your email if confirmation is required, then log in.");
-}
 async function login(){
-  try {
-    const email = loginEmail.value.trim();
-    const password = loginPassword.value.trim();
-
-    if(!email || !password){
-      alert("Please enter your email and password.");
-      return;
-    }
-
-    console.log("Attempting Forge login for", email);
-
-    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-
-    if(error) {
-      alert(error.message);
-      return;
-    }
-
-    console.log("Forge login successful");
-  } catch(err) {
-    console.error("Forge login crashed:", err);
+  try{
+    const email=el("loginEmail").value.trim();
+    const password=el("loginPassword").value.trim();
+    if(!email || !password) return alert("Please enter email and password.");
+    el("loginBtn").textContent = "Logging in...";
+    const { error } = await supabaseClient.auth.signInWithPassword({email,password});
+    el("loginBtn").textContent = "Log in";
+    if(error) return alert(error.message);
+  }catch(err){
+    el("loginBtn").textContent = "Log in";
+    console.error(err);
     alert("Login error: " + (err.message || err));
   }
 }
-async function logout(){ await supabaseClient.auth.signOut(); currentUser=null; currentProfile=null; render(); }
 
-
-function clientProfileComplete(){
-  if(currentProfile?.role !== "client") return true;
-  return !!(currentProfile.date_of_birth && currentProfile.emergency_contact_name && currentProfile.emergency_contact_phone);
+async function signup(){
+  try{
+    const email=el("signupEmail").value.trim(), password=el("signupPassword").value.trim(), name=el("signupName").value.trim();
+    const dob=el("signupDob").value||null, eName=el("signupEmergencyName").value.trim(), ePhone=el("signupEmergencyPhone").value.trim();
+    const isCoach=isCoachEmail(email);
+    if(!email || !password || !name) return alert("Add name, email and password.");
+    if(!isCoach){
+      if(!dob || !eName || !ePhone) return alert("Clients must add date of birth, emergency contact name, and emergency contact phone.");
+      if(name.toLowerCase() === eName.toLowerCase()) return alert("Emergency contact cannot be the same person as the client.");
+    }
+    const coach = isCoach ? null : await getCoachProfile();
+    const { data, error } = await supabaseClient.auth.signUp({email,password});
+    if(error) return alert(error.message);
+    if(data.user){
+      const payload={id:data.user.id,email,full_name:name,role:isCoach?"coach":"client",coach_id:isCoach?null:(coach?.id||null),date_of_birth:isCoach?null:dob,emergency_contact_name:isCoach?"":eName,emergency_contact_phone:isCoach?"":ePhone};
+      const { error:pError } = await supabaseClient.from("profiles").insert(payload);
+      if(pError) return alert("Account created, but profile insert needs policy check: " + pError.message);
+    }
+    alert(isCoach ? "Coach account created. Log in." : "Client account created and assigned to Marcell. Check email if confirmation is required.");
+  }catch(err){ console.error(err); alert("Signup error: " + (err.message||err)); }
 }
 
-function missingProfileWarning(){
-  return `<div class="card banner"><h2>Profile details required</h2><p class="muted">Before continuing, please add your date of birth and emergency contact details in Settings.</p><button class="green" onclick="show('settings')">Go to Settings</button></div>`;
-}
+function clientComplete(){ return currentProfile?.role !== "client" || !!(currentProfile.date_of_birth && currentProfile.emergency_contact_name && currentProfile.emergency_contact_phone); }
 
 function render(){
-  const logged = !!currentUser;
-  authView.classList.toggle("hide", logged);
-  appView.classList.toggle("hide", !logged);
-  if(!logged){ profileLine.textContent = "Forge Cloud"; return; }
-  profileLine.textContent = `${currentProfile.full_name || currentUser.email} · ${currentProfile.role}`;
-  renderTabs();
-  if(currentProfile.role === "client" && !clientProfileComplete()){
-    renderPhase();
-    today.innerHTML = missingProfileWarning();
-    program.innerHTML = missingProfileWarning();
-    progress.innerHTML = missingProfileWarning();
-    requests.innerHTML = missingProfileWarning();
-    renderSettings();
-    return;
-  }
-  renderPhase(); renderToday(); renderProgram(); renderProgress(); renderCoach(); renderRequests(); renderSettings();
+  const logged=!!currentUser;
+  el("authView").classList.toggle("hide", logged);
+  el("appView").classList.toggle("hide", !logged);
+  if(!logged){ el("profileLine").textContent="Forge Cloud"; return; }
+  el("profileLine").textContent=`${currentProfile.full_name || currentUser.email} · ${currentProfile.role}`;
+  renderTabs(); renderPhase(); renderToday(); renderProgram(); renderProgress(); renderClients(); renderRequests(); renderSettings();
+  show(activeView, true);
 }
-function currentWeek(){ return getLocal().week || 1; }
-function setWeek(w){ const d=getLocal(); d.week=Number(w); setLocal(d); render(); }
+
+function renderTabs(){
+  const items=currentProfile.role==="coach" ? [["today","Today"],["program","Program"],["progress","Progress"],["clients","Clients"],["requests","Requests"],["settings","Settings"]] : [["today","Today"],["program","Program"],["progress","Progress"],["requests","Requests"],["settings","Settings"]];
+  el("tabs").innerHTML=items.map(([v,l])=>`<button class="tab ${activeView===v?"active":""}" onclick="show('${v}')">${l}</button>`).join("");
+}
+
+function show(view, silent=false){
+  if(view==="clients" && currentProfile?.role!=="coach") view="today";
+  if(currentProfile?.role==="client" && !clientComplete() && view!=="settings") view="settings";
+  activeView=view;
+  document.querySelectorAll(".view").forEach(x=>x.classList.add("hide"));
+  const target=el(view); if(target) target.classList.remove("hide");
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.textContent.toLowerCase()===view));
+  if(!silent) render();
+}
+
+function week(){ return getStore().week||1; }
+function phase(){ return PHASES[Math.min(3, Math.floor((week()-1)/6))]; }
 function renderPhase(){
-  const ph = phaseForWeek(currentWeek());
-  phaseBand.innerHTML = `<div class="card banner"><div class="row space"><div><h2>📅 Phase ${ph.n} – ${ph.name}</h2><p class="muted">${ph.weeks}</p></div><span class="pill green">Week ${currentWeek()}</span></div>
-  <div class="grid"><div><b>Focus</b>${ph.focus.map(x=>`<p class="small muted">• ${x}</p>`).join("")}</div><div><b>How to train</b>${ph.how.map(x=>`<p class="small muted">• ${x}</p>`).join("")}</div><div><b>Goal</b>${ph.goal.map(x=>`<p class="small muted">👉 ${x}</p>`).join("")}</div></div></div>`;
+  const p=phase();
+  el("phaseBand").innerHTML=`<div class="card banner"><div class="row space"><div><h2>📅 Phase ${Math.floor((week()-1)/6)+1} - ${p.name}</h2><p class="muted">${p.weeks}</p></div><span class="pill">Week ${week()}</span></div><div class="grid"><div><b>Focus</b>${p.focus.map(x=>`<p class="small muted">• ${x}</p>`).join("")}</div><div><b>How to train</b>${p.how.map(x=>`<p class="small muted">• ${x}</p>`).join("")}</div><div><b>Goal</b>${p.goal.map(x=>`<p class="small muted">👉 ${x}</p>`).join("")}</div></div></div>`;
 }
-function workoutForToday(){
-  const day = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date().getDay()];
-  return PROGRAM.find(w=>w.schedule===day) || PROGRAM[0];
+function todayWorkout(){ const d=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date().getDay()]; return PROGRAM.find(w=>w.schedule===d)||PROGRAM[0]; }
+function workoutCard(w){ return `<div class="card"><div class="row space"><div><h2>${w.day}</h2><span class="pill">${w.schedule}</span><span class="pill">Week ${week()}</span></div><div class="row"><button class="secondary" onclick="previewWorkout('${w.day}')">Open</button><button class="green" onclick="startWorkout('${w.day}')">Start</button></div></div>${[...new Set(w.exercises.map(e=>e[0]))].map(s=>`<span class="pill">${s}</span>`).join("")}</div>`; }
+function renderToday(){ el("today").innerHTML=`<div class="card"><h2>Today</h2><p class="muted">Main lifts rest 90 sec. Others rest 60 sec. Move with intent.</p></div>${activeSession?`<div class="card banner"><h2>Workout in progress</h2><p>${activeSession.workout}</p><button class="green" onclick="renderSession()">Resume workout</button></div>`:workoutCard(todayWorkout())}`; }
+function renderProgram(){ el("program").innerHTML=`<div class="card"><h2>Program</h2><p class="muted">Open to preview the whole workout or Start to log it.</p></div>${PROGRAM.map(workoutCard).join("")}`; }
+function renderProgress(){ const s=getStore().sessions; el("progress").innerHTML=`<div class="card"><h2>Progress</h2><p class="muted">${s.length} workouts saved on this device.</p>${s.slice().reverse().map(x=>`<div class="exercise"><b>${x.workout}</b><p class="small muted">${new Date(x.date).toLocaleString()}</p></div>`).join("")}</div>`; }
+async function renderClients(){
+  if(currentProfile?.role!=="coach"){ el("clients").innerHTML=""; return; }
+  const {data,error}=await supabaseClient.from("profiles").select("*").eq("coach_id",currentProfile.id).order("full_name",{ascending:true});
+  el("clients").innerHTML=`<div class="card"><h2>Clients</h2><p class="muted">New clients are automatically assigned to you.</p></div>${error?`<div class="card">Could not load clients: ${error.message}</div>`:(data||[]).map(c=>`<div class="card"><h2>${c.full_name||c.email}</h2><p class="muted">${c.email||""}</p><p>DOB: ${c.date_of_birth||"Not added"}</p><p>Emergency: ${c.emergency_contact_name||"Not added"} ${c.emergency_contact_phone||""}</p></div>`).join("") || "<div class='card'>No clients yet.</div>"}`;
 }
-
-function previewWorkout(dayName){
-  const w=PROGRAM.find(x=>x.day===dayName);
-  const sections=[...new Set(w.exercises.map(e=>e[0]))];
-  modalBody.innerHTML = `<h2>${w.day}</h2><p class="muted">${w.schedule} · Week ${currentWeek()}</p>` +
-    sections.map(sec=>`<div class="card"><h3>${sec}</h3>${w.exercises.filter(e=>e[0]===sec).map(e=>`<p><b>${e[1]}</b> · ${e[2]} x ${e[3]} ${e[4]} · ${e[5]==="main" ? "90 sec rest" : "60 sec rest"}</p>`).join("")}</div>`).join("") +
-    `<button class="green full" onclick="closeModal(); startWorkout('${w.day.replace(/'/g,"")}')">Start this workout</button>`;
-  modal.classList.add("show");
-}
-
-function workoutCard(w){
-  return `<div class="card"><div class="row space"><div><h2>${w.day}</h2><span class="pill">${w.schedule}</span><span class="pill">Week ${currentWeek()}</span></div><div class="row"><button class="secondary" onclick='previewWorkout(${JSON.stringify(w.day)})'>Open</button><button class="green" onclick='startWorkout(${JSON.stringify(w.day)})'>Start</button></div></div>${[...new Set(w.exercises.map(e=>e[0]))].map(s=>`<span class="pill">${s}</span>`).join("")}</div>`;
-}
-function renderToday(){
-  if(activeSession){
-    today.innerHTML = `<div class="card banner"><div class="row space"><div><h2>Workout in progress</h2><p class="muted">${activeSession.workout} · Week ${activeSession.week}</p></div><button class="green" onclick="renderSession()">Resume workout</button></div></div>`;
-    return;
-  }
-  today.innerHTML = `<div class="card"><h2>Today</h2><p class="muted">Main lifts rest 90 sec. Others rest 60 sec. Move with intent.</p></div>${workoutCard(workoutForToday())}`;
-}
-function renderProgram(){
-  program.innerHTML = `<div class="card"><div class="row space"><div><h2>Program</h2><p class="muted">Select week and start a workout.</p></div><select onchange="setWeek(this.value)">${Array.from({length:24},(_,i)=>`<option value="${i+1}" ${currentWeek()==i+1?"selected":""}>Week ${i+1}</option>`).join("")}</select></div></div>${PROGRAM.map(workoutCard).join("")}`;
-}
-function lastLog(exName){
-  const d=getLocal();
-  const logs=d.sessions.flatMap(s=>s.exercises).filter(e=>e.name===exName);
-  return logs.at(-1);
-}
-function suggest(ex){
-  const last=lastLog(ex.name);
-  if(!last) return { last:"No previous log", suggested: metricPrompt(ex) };
-  if(isBodyweightExercise(ex)) return { last:"Previous log", suggested:"Body Weight" };
-  if(isDurationExercise(ex)) return { last:"Previous log", suggested:"Choose duration" };
-  if(isSpeedExercise(ex)) return { last:"Previous log", suggested:"Choose speed" };
-  if(isInclineExercise(ex)) return { last:"Previous log", suggested:"Choose incline" };
-  const weights=last.sets.map(s=>Number(s.weight)||0).filter(Boolean);
-  const max=Math.max(...weights,0);
-  if(!max) return { last:"Last weight not logged", suggested:"Enter working weight" };
-  const top=last.sets.every(s=>Number(s.reps)>=Number(ex.reps));
-  const inc=ex.type==="main" ? (phaseForWeek(currentWeek()).n>=2 ? 2.5 : 1) : 1;
-  return { last:`Last: ${max}kg`, suggested:`Suggested: ${top ? max+inc : max}kg` };
-}
-
-function isWeightedExercise(e){ return ["main","other"].includes(e.type); }
-function isBodyweightExercise(e){ return e.type === "bodyweight" || e.type === "duration_bodyweight"; }
-function isDurationExercise(e){ return e.type === "duration" || e.type === "duration_bodyweight"; }
-function isInclineExercise(e){ return e.type === "incline"; }
-function isSpeedExercise(e){ return e.type === "speed"; }
-
-function primaryMetricLabel(e){
-  if(isBodyweightExercise(e)) return "Body Weight";
-  if(isInclineExercise(e)) return "Incline Level";
-  if(isSpeedExercise(e)) return "Speed Level";
-  if(isDurationExercise(e)) return "Duration";
-  return "kg";
-}
-
-function secondaryMetricLabel(e){
-  if(isDurationExercise(e)) return "min / seconds";
-  if(isSpeedExercise(e)) return "Speed Level";
-  if(isInclineExercise(e)) return "Duration";
-  return "reps";
-}
-
-function startMetricValue(e){
-  if(isBodyweightExercise(e)) return "Body Weight";
-  return "";
-}
-
-function startSecondaryValue(e){
-  return e.reps || "";
-}
-
-function metricPrompt(e){
-  if(isSpeedExercise(e)) return "Choose speed";
-  if(isInclineExercise(e)) return "Choose incline";
-  if(isDurationExercise(e)) return "Choose duration";
-  if(isBodyweightExercise(e)) return "Body Weight";
-  return "Choose start weight";
-}
-
-function displaySetLine(e,set){
-  if(isBodyweightExercise(e)){
-    const dur = isDurationExercise(e) ? ` · ${set.reps || 0} sec` : ` x ${set.reps || 0} reps`;
-    return `Body Weight${dur}`;
-  }
-  if(isSpeedExercise(e)) return `Speed ${set.weight || 0} · Level ${set.reps || 0}`;
-  if(isInclineExercise(e)) return `Incline ${set.weight || 0} · ${set.reps || 0} min/sec`;
-  if(isDurationExercise(e)) return `${set.reps || 0} min/sec`;
-  return `${set.weight || 0}kg x ${set.reps || 0}`;
-}
-
-function startWorkout(dayName){
-  const w=PROGRAM.find(x=>x.day===dayName);
-  activeSession={ id:uuid(), date:new Date().toISOString(), week:currentWeek(), phase:phaseForWeek(currentWeek()).n, workout:w.day, exercises:w.exercises.map(e=>{
-    const obj={ section:e[0], name:e[1], setsCount:e[2], reps:e[3], unit:e[4], type:e[5], rest:e[5]==="main"?90:60 };
-    const sg=suggest(obj);
-    const sw=isWeightedExercise(obj) ? ((sg.suggested.match(/([0-9.]+)/)||[])[1] || "") : startMetricValue(obj);
-    obj.sets=Array.from({length:obj.setsCount},(_,i)=>({n:i+1, weight:sw, reps:startSecondaryValue(obj), done:false}));
-    return obj;
-  }), notes:""};
-  saveActiveSession();
-  renderSession();
-}
-function renderSession(){
-  document.querySelectorAll(".view").forEach(v=>v.classList.add("hide"));
-  today.classList.remove("hide");
-  const sections=[...new Set(activeSession.exercises.map(e=>e.section))];
-  today.innerHTML = `<div class="card"><div class="row space"><div><h2>${activeSession.workout}</h2><p class="muted">Tick each set to start rest timer.</p></div><button class="green" onclick="finishWorkout()">Finish Workout</button></div></div>` +
-  sections.map(sec=>`<div class="card"><h2>${sec}</h2>${activeSession.exercises.filter(e=>e.section===sec).map((e,ei)=>{
-    const realIndex=activeSession.exercises.indexOf(e); const sg=suggest(e);
-    return `<div class="exercise"><h3>${e.name}</h3><p class="small muted">${sg.last} · ${sg.suggested} · Rest ${e.rest}s</p>${e.sets.map((s,si)=>`<div class="setrow"><div class="n">${si+1}</div><input ${isBodyweightExercise(e) ? 'readonly' : 'type="number"'} placeholder="${primaryMetricLabel(e)}" value="${s.weight}" onchange="activeSession.exercises[${realIndex}].sets[${si}].weight=this.value; saveActiveSession()"><input type="number" placeholder="${secondaryMetricLabel(e)}" value="${s.reps}" onchange="activeSession.exercises[${realIndex}].sets[${si}].reps=this.value; saveActiveSession()"><button class="check ${s.done?"done":""}" onclick="toggleSet(${realIndex},${si})">✓</button></div>`).join("")}<textarea placeholder="Exercise notes/comments" onchange="activeSession.exercises[${realIndex}].comment=this.value; saveActiveSession()">${e.comment||""}</textarea><button class="secondary full" onclick="requestSub('${e.name.replace(/'/g,"")}')">Request substitution</button></div>`;
-  }).join("")}</div>`).join("") +
-  `<div class="card"><h2>Health check-in</h2><div class="grid"><input id="sleep" type="number" placeholder="Sleep 1-10"><input id="energy" type="number" placeholder="Energy 1-10"><input id="stress" type="number" placeholder="Stress 1-10"><input id="soreness" type="number" placeholder="Soreness 1-10"><input id="rpe" type="number" placeholder="RPE 1-10"></div><textarea id="sessionNotes" placeholder="Overall notes"></textarea></div>`;
-}
-function toggleSet(ei,si){ const s=activeSession.exercises[ei].sets[si]; s.done=!s.done; saveActiveSession(); if(s.done) startTimer(activeSession.exercises[ei].rest); renderSession(); }
-function finishWorkout(){
-  activeSession.notes=document.getElementById("sessionNotes")?.value||"";
-  const d=getLocal();
-  d.sessions.push(activeSession);
-  d.health.push({ sessionId:activeSession.id, date:new Date().toISOString(), sleep:sleep.value, energy:energy.value, stress:stress.value, soreness:soreness.value, rpe:rpe.value });
-  setLocal(d); saveSessionCloud(activeSession); clearActiveSession(); activeSession=null; alert("Workout saved."); show("progress");
-}
-async function saveSessionCloud(s){
-  try {
-    const { data: workout, error:wErr } = await supabaseClient.from("workouts").insert({ user_id: currentUser.id, phase:`Phase ${s.phase}`, workout_name:s.workout }).select().single();
-    if(wErr) throw wErr;
-    const rows=s.exercises.flatMap(e=>e.sets.map(set=>({ workout_id:workout.id, exercise:e.name, sets:set.n, reps:Number(set.reps)||0, weight:isWeightedExercise(e)||isSpeedExercise(e)||isInclineExercise(e) ? (Number(set.weight)||0) : 0, notes:(e.comment||"") + (isBodyweightExercise(e) ? " Body Weight" : "") })));
-    if(rows.length) await supabaseClient.from("workout_logs").insert(rows);
-  } catch(err){ console.warn("Cloud save issue:", err.message); }
-}
-function volume(s){ return s.exercises.reduce((a,e)=> isWeightedExercise(e) ? a+e.sets.reduce((b,set)=>b+(Number(set.weight)||0)*(Number(set.reps)||0),0) : a,0); }
-function renderProgress(){
-  const d=getLocal(); const ss=d.sessions;
-  progress.innerHTML=`<div class="grid"><div class="card"><h2>${ss.length}</h2><p class="muted">Workouts</p></div><div class="card"><h2>${Math.round(ss.reduce((a,s)=>a+volume(s),0))}kg</h2><p class="muted">Total volume</p></div></div><div class="card"><h2>Completed workouts</h2>${ss.slice().reverse().map(s=>`<div class="card"><div class="row space"><div><b>${s.workout}</b><p class="small muted">${new Date(s.date).toLocaleString()} · Week ${s.week} · ${Math.round(volume(s))}kg</p></div><button class="secondary" onclick="openSession('${s.id}')">Open</button></div></div>`).join("") || "<p class='muted'>No workouts yet.</p>"}</div>`;
-}
-function openSession(id){
-  const s=getLocal().sessions.find(x=>x.id===id);
-  modalBody.innerHTML=`<h2>${s.workout}</h2><p class="muted">${new Date(s.date).toLocaleString()} · Week ${s.week}</p>${s.exercises.map(e=>`<div class="card"><b>${e.name}</b><p class="small muted">${e.section}</p>${e.sets.map(set=>`<p>Set ${set.n}: ${displaySetLine(e,set)} ${set.done?"✅":""}</p>`).join("")}${e.comment?`<p>Comment: ${e.comment}</p>`:""}</div>`).join("")}`;
-  modal.classList.add("show");
-}
-async function renderCoach(){
-  if(currentProfile.role!=="coach"){
-    coach.innerHTML="";
-    return;
-  }
-
-  const { data:clients, error } = await supabaseClient
-    .from("profiles")
-    .select("*")
-    .eq("coach_id", currentProfile.id)
-    .order("full_name", { ascending:true });
-
-  if(error){
-    coach.innerHTML=`<div class="card"><h2>Clients</h2><p class="muted">Could not load clients: ${error.message}</p></div>`;
-    return;
-  }
-
-  coach.innerHTML=`<div class="card"><h2>Clients</h2><p class="muted">Permanent coach: ${PERMANENT_COACH_EMAIL}. New clients are automatically assigned to you.</p></div>
-  <div class="grid">
-    <div class="card"><h2>My Training</h2><p class="muted">Use Today and Program tabs for your own training.</p></div>
-    ${(clients||[]).map(c=>`<div class="card"><h2>${c.full_name || c.email || "Client"}</h2>
-      <p class="muted">${c.email || ""}</p>
-      <p class="small">DOB: ${c.date_of_birth || "Not added"}</p>
-      <p class="small">Emergency: ${c.emergency_contact_name || "Not added"} ${c.emergency_contact_phone ? "· " + c.emergency_contact_phone : ""}</p>
-      <span class="pill green">Assigned to you</span></div>`).join("") || "<div class='card'><p class='muted'>No clients yet.</p></div>"}
-  </div>`;
-}
-function requestSub(name){
-  const reason=prompt(`Request substitution for ${name}. What would you like changed?`);
-  if(!reason) return;
-  const d=getLocal(); d.requests.push({id:uuid(), exercise:name, reason, status:"pending", date:new Date().toISOString()}); setLocal(d);
-  supabaseClient.from("substitution_requests").insert({ user_id: currentUser.id, exercise:name, requested_change:reason }).then(()=>{});
-  alert("Substitution request saved.");
-}
-function renderRequests(){
-  const d=getLocal();
-  requests.innerHTML=`<div class="card"><h2>Substitution Requests</h2>${d.requests.slice().reverse().map(r=>`<div class="card"><b>${r.exercise}</b><p>${r.reason}</p><span class="pill yellow">${r.status}</span></div>`).join("") || "<p class='muted'>No requests yet.</p>"}</div>`;
-}
-
-async function updateProfileDetails(){
-  const payload = {
-    full_name: settingsName.value.trim(),
-    date_of_birth: settingsDob.value || null,
-    emergency_contact_name: settingsEmergencyName.value.trim(),
-    emergency_contact_phone: settingsEmergencyPhone.value.trim()
-  };
-
-  if(currentProfile.role === "client"){
-    if(!payload.date_of_birth || !payload.emergency_contact_name || !payload.emergency_contact_phone){
-      alert("Clients must keep date of birth and emergency contact details completed.");
-      return;
-    }
-
-    if(payload.full_name.toLowerCase() === payload.emergency_contact_name.toLowerCase()){
-      alert("Emergency contact cannot be the same person as the client.");
-      return;
-    }
-  }
-
-  const { data, error } = await supabaseClient
-    .from("profiles")
-    .update(payload)
-    .eq("id", currentUser.id)
-    .select()
-    .single();
-
-  if(error){
-    alert("Could not update profile: " + error.message);
-    return;
-  }
-
-  currentProfile = data;
-  alert("Profile updated.");
-  render();
-}
-
+function renderRequests(){ el("requests").innerHTML=`<div class="card"><h2>Requests</h2><p class="muted">Substitution requests will appear here.</p></div>`; }
 function renderSettings(){
-  settings.innerHTML=`<div class="card"><h2>Account</h2>
-    <p class="muted">${currentUser.email} · ${currentProfile.role}</p>
-    <label class="small muted">Full name</label>
-    <input id="settingsName" value="${currentProfile.full_name || ""}" placeholder="Full name">
-    <label class="small muted">Date of birth</label>
-    <input id="settingsDob" type="date" value="${currentProfile.date_of_birth || ""}">
-    <label class="small muted">Emergency contact name</label>
-    <input id="settingsEmergencyName" value="${currentProfile.emergency_contact_name || ""}" placeholder="Emergency contact name">
-    <label class="small muted">Emergency contact phone</label>
-    <input id="settingsEmergencyPhone" value="${currentProfile.emergency_contact_phone || ""}" placeholder="Emergency contact phone">
-    <button class="green full" onclick="updateProfileDetails()">Save profile details</button>
-    <br><br>
-    <button class="secondary" onclick="logout()">Log out</button>
-  </div>
-  <div class="card"><h2>Cloud</h2><p class="muted">Supabase is connected. Workout saves locally and also attempts cloud save.</p></div>`;
+  el("settings").innerHTML=`<div class="card"><h2>Settings</h2><p class="muted">${currentUser.email} · ${currentProfile.role}</p><label class="small muted">Full name</label><input id="settingsName" value="${currentProfile.full_name||""}"><label class="small muted">Date of birth</label><input id="settingsDob" type="date" value="${currentProfile.date_of_birth||""}"><label class="small muted">Emergency contact name</label><input id="settingsEmergencyName" value="${currentProfile.emergency_contact_name||""}"><label class="small muted">Emergency contact phone</label><input id="settingsEmergencyPhone" value="${currentProfile.emergency_contact_phone||""}"><button class="green full" onclick="updateProfile()">Save profile details</button><br><br><button class="secondary" onclick="logout()">Log out</button></div>`;
 }
-function startTimer(sec){ clearInterval(timerInterval); timerLeft=sec; timer.classList.add("show"); tick(); timerInterval=setInterval(()=>{timerLeft--;tick(); if(timerLeft<=0) stopTimer();},1000); }
-function tick(){ timerTime.textContent=`${String(Math.floor(timerLeft/60)).padStart(2,"0")}:${String(timerLeft%60).padStart(2,"0")}`; }
-function stopTimer(){ clearInterval(timerInterval); timer.classList.remove("show"); }
-function adjustTimer(n){ timerLeft=Math.max(0,timerLeft+n); tick(); }
-function closeModal(){ modal.classList.remove("show"); }
-
-
-function wireButtons(){
-  const loginButton = document.getElementById("loginBtn");
-  const signupButton = document.getElementById("signupBtn");
-
-  if(loginButton){
-    loginButton.addEventListener("click", async () => {
-      console.log("Forge login button clicked");
-      await login();
-    });
+async function updateProfile(){
+  const payload={full_name:el("settingsName").value.trim(),date_of_birth:el("settingsDob").value||null,emergency_contact_name:el("settingsEmergencyName").value.trim(),emergency_contact_phone:el("settingsEmergencyPhone").value.trim()};
+  if(currentProfile.role==="client"){
+    if(!payload.date_of_birth||!payload.emergency_contact_name||!payload.emergency_contact_phone) return alert("Clients must keep date of birth and emergency contact details completed.");
+    if(payload.full_name.toLowerCase()===payload.emergency_contact_name.toLowerCase()) return alert("Emergency contact cannot be the same as the client.");
   }
-
-  if(signupButton){
-    signupButton.addEventListener("click", async () => {
-      console.log("Forge signup button clicked");
-      await signup();
-    });
-  }
+  const {data,error}=await supabaseClient.from("profiles").update(payload).eq("id",currentUser.id).select().single();
+  if(error) return alert(error.message);
+  currentProfile=data; alert("Profile updated."); render();
 }
+function startWorkout(day){ const w=PROGRAM.find(x=>x.day===day); activeSession={id:Date.now(),date:new Date().toISOString(),workout:w.day,exercises:w.exercises}; saveActive(); renderSession(); }
+function renderSession(){ activeView="today"; el("today").innerHTML=`<div class="card"><div class="row space"><div><h2>${activeSession.workout}</h2><p class="muted">Workout in progress.</p></div><button class="green" onclick="finishWorkout()">Finish workout</button></div></div>${activeSession.exercises.map(e=>`<div class="card"><h3>${e[1]}</h3><p class="muted">${e[0]} · ${e[2]} x ${e[3]} ${e[4]}</p></div>`).join("")}`; show("today",true); }
+function finishWorkout(){ const d=getStore(); d.sessions.push(activeSession); setStore(d); clearActive(); activeSession=null; alert("Workout saved."); activeView="progress"; render(); }
+function previewWorkout(day){ const w=PROGRAM.find(x=>x.day===day); modalBody.innerHTML=`<h2>${w.day}</h2>${w.exercises.map(e=>`<div class="exercise"><b>${e[0]}:</b> ${e[1]} · ${e[2]} x ${e[3]} ${e[4]}</div>`).join("")}`; el("modal").classList.add("show"); }
+function closeModal(){ el("modal").classList.remove("show"); }
+async function logout(){ await supabaseClient.auth.signOut(); currentUser=null; currentProfile=null; activeSession=null; render(); }
 
-wireButtons();
-
-init();
+init().then(setupAuthListener);
 </script>
 </body>
 </html>
