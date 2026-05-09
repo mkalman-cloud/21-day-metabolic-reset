@@ -44,7 +44,7 @@
         <h2>Log in</h2>
         <input id="loginEmail" placeholder="Email" autocomplete="email">
         <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password">
-        <button id="loginBtn" class="green full" type="button">Log in</button>
+        <button id="loginBtn" class="green full" type="button" onclick="login()">Log in</button>
       </div>
       <div class="card">
         <h2>Create account</h2>
@@ -54,7 +54,7 @@
         <input id="signupDob" type="date" placeholder="Date of birth">
         <input id="signupEmergencyName" placeholder="Emergency contact name">
         <input id="signupEmergencyPhone" placeholder="Emergency contact phone">
-        <button id="signupBtn" class="green full" type="button">Create account</button>
+        <button id="signupBtn" class="green full" type="button" onclick="signup()">Create account</button>
         <p class="muted small">Client accounts are automatically assigned to Marcell as coach.</p>
       </div>
     </div>
@@ -125,8 +125,7 @@ async function init(){
     if(!window.STRONG_WEEK_CONFIG) throw new Error("Missing config.js values.");
     supabaseClient = window.supabase.createClient(window.STRONG_WEEK_CONFIG.supabaseUrl, window.STRONG_WEEK_CONFIG.supabaseAnonKey);
 
-    el("loginBtn").onclick = login;
-    el("signupBtn").onclick = signup;
+    console.log("Forge buttons ready");
 
     const { data, error } = await supabaseClient.auth.getSession();
     if(error) throw error;
@@ -184,6 +183,7 @@ async function loadProfile(){
 
 async function login(){
   try{
+    console.log("Login button pressed");
     const email=el("loginEmail").value.trim();
     const password=el("loginPassword").value.trim();
     if(!email || !password) return alert("Please enter email and password.");
@@ -200,6 +200,7 @@ async function login(){
 
 async function signup(){
   try{
+    console.log("Create account button pressed");
     const email=el("signupEmail").value.trim(), password=el("signupPassword").value.trim(), name=el("signupName").value.trim();
     const dob=el("signupDob").value||null, eName=el("signupEmergencyName").value.trim(), ePhone=el("signupEmergencyPhone").value.trim();
     const isCoach=isCoachEmail(email);
