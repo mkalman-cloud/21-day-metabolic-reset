@@ -5,8 +5,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Forge</title>
   <meta name="theme-color" content="#020817" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">async function logout(){
+  try{
+    console.log("Logout button pressed");
+    if(supabaseClient){
+      await supabaseClient.auth.signOut({ scope: "global" });
+    }
+  }catch(err){
+    console.warn("Logout warning:", err);
+  }finally{
+    currentUser = null;
+    currentProfile = null;
+    activeSession = null;
+
+    try{ clearActive(); }catch(e){}
+    try{ localStorage.clear(); }catch(e){}
+    try{ sessionStorage.clear(); }catch(e){}
+
+    document.cookie.split(";").forEach(c => {
+      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+    });
+
+    location.href = location.pathname + "?logout=" + Date.now();
+  }
+}
+</script>
+  <script src="config.js">async function logout(){
+  try{
+    console.log("Logout button pressed");
+    if(supabaseClient){
+      await supabaseClient.auth.signOut({ scope: "global" });
+    }
+  }catch(err){
+    console.warn("Logout warning:", err);
+  }finally{
+    currentUser = null;
+    currentProfile = null;
+    activeSession = null;
+
+    try{ clearActive(); }catch(e){}
+    try{ localStorage.clear(); }catch(e){}
+    try{ sessionStorage.clear(); }catch(e){}
+
+    document.cookie.split(";").forEach(c => {
+      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+    });
+
+    location.href = location.pathname + "?logout=" + Date.now();
+  }
+}
+</script>
   <style>
     :root{--bg:#020817;--card:#0f172a;--line:#26344d;--text:#f8fafc;--muted:#94a3b8;--green:#34d399;--blue:#60a5fa}
     *{box-sizing:border-box}
@@ -125,7 +173,7 @@ async function init(){
     if(!window.STRONG_WEEK_CONFIG) throw new Error("Missing config.js values.");
     supabaseClient = window.supabase.createClient(window.STRONG_WEEK_CONFIG.supabaseUrl, window.STRONG_WEEK_CONFIG.supabaseAnonKey);
 
-    console.log("Forge buttons ready");
+    console.log("Forge buttons ready - logout fix v1");
 
     const { data, error } = await supabaseClient.auth.getSession();
     if(error) throw error;
@@ -306,7 +354,7 @@ async function renderClients(){
 }
 function renderRequests(){ el("requests").innerHTML=`<div class="card"><h2>Requests</h2><p class="muted">Substitution requests will appear here.</p></div>`; }
 function renderSettings(){
-  el("settings").innerHTML=`<div class="card"><h2>Settings</h2><p class="muted">${currentUser.email} · ${currentProfile.role}</p><label class="small muted">Full name</label><input id="settingsName" value="${currentProfile.full_name||""}"><label class="small muted">Date of birth</label><input id="settingsDob" type="date" value="${currentProfile.date_of_birth||""}"><label class="small muted">Emergency contact name</label><input id="settingsEmergencyName" value="${currentProfile.emergency_contact_name||""}"><label class="small muted">Emergency contact phone</label><input id="settingsEmergencyPhone" value="${currentProfile.emergency_contact_phone||""}"><button class="green full" onclick="updateProfile()">Save profile details</button><br><br><button class="secondary" onclick="logout()">Log out</button></div>`;
+  el("settings").innerHTML=`<div class="card"><h2>Settings</h2><p class="muted">${currentUser.email} · ${currentProfile.role}</p><label class="small muted">Full name</label><input id="settingsName" value="${currentProfile.full_name||""}"><label class="small muted">Date of birth</label><input id="settingsDob" type="date" value="${currentProfile.date_of_birth||""}"><label class="small muted">Emergency contact name</label><input id="settingsEmergencyName" value="${currentProfile.emergency_contact_name||""}"><label class="small muted">Emergency contact phone</label><input id="settingsEmergencyPhone" value="${currentProfile.emergency_contact_phone||""}"><button class="green full" onclick="updateProfile()">Save profile details</button><br><br><button class="secondary" type="button" onclick="logout()">Log out</button></div>`;
 }
 async function updateProfile(){
   const payload={full_name:el("settingsName").value.trim(),date_of_birth:el("settingsDob").value||null,emergency_contact_name:el("settingsEmergencyName").value.trim(),emergency_contact_phone:el("settingsEmergencyPhone").value.trim()};
@@ -326,6 +374,30 @@ function closeModal(){ el("modal").classList.remove("show"); }
 async function logout(){ await supabaseClient.auth.signOut(); currentUser=null; currentProfile=null; activeSession=null; render(); }
 
 init().then(setupAuthListener);
+async function logout(){
+  try{
+    console.log("Logout button pressed");
+    if(supabaseClient){
+      await supabaseClient.auth.signOut({ scope: "global" });
+    }
+  }catch(err){
+    console.warn("Logout warning:", err);
+  }finally{
+    currentUser = null;
+    currentProfile = null;
+    activeSession = null;
+
+    try{ clearActive(); }catch(e){}
+    try{ localStorage.clear(); }catch(e){}
+    try{ sessionStorage.clear(); }catch(e){}
+
+    document.cookie.split(";").forEach(c => {
+      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+    });
+
+    location.href = location.pathname + "?logout=" + Date.now();
+  }
+}
 </script>
 </body>
 </html>
