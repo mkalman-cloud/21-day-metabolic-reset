@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Forge Platform v3</title>
+  <title>Forge Platform v3.1</title>
   <meta name="theme-color" content="#020817" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
@@ -88,7 +88,7 @@ function week(){return selectedClientState?.current_week||1} function renderPhas
 function todayWorkout(){const d=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date().getDay()];return currentProgram().find(w=>w.schedule===d)||currentProgram()[0]}
 function workoutCard(w){return `<div class="card"><div class="row space"><div><h2>${w.day}</h2><span class="pill">${w.schedule}</span><span class="pill">Week ${week()}</span></div><div class="row"><button class="secondary" onclick="previewWorkout('${w.day}')">Open</button><button class="green" onclick="startWorkout('${w.day}')">Start</button></div></div></div>`}
 function renderToday(){el("today").innerHTML=`<div class="card"><h2>Today</h2><p class="muted">Complete 3 workouts to progress unless coach locks the week.</p></div>${activeSession?`<div class="card banner"><h2>Workout in progress</h2><button class="green" onclick="renderSession()">Resume</button></div>`:workoutCard(todayWorkout())}`}
-function renderProgram(){el("program").innerHTML=`<div class="card"><h2>Program: ${currentProgramName()}</h2><p class="muted">${PROGRAMS[programKey()].description}</p><p class="muted">Open to preview. Start to log.</p></div>${currentProgram().map(workoutCard).join("")}`}
+function renderProgram(){el("program").innerHTML=`<div class="card"><h2>Assigned Program: ${currentProgramName()}</h2><p class="muted">${PROGRAMS[programKey()].description}</p><p class="muted">This is the program currently assigned to this profile. Coaches can change a client’s program from Clients → Open profile → Program Assignment.</p></div>${currentProgram().map(workoutCard).join("")}`}
 function startWorkout(day){const w=currentProgram().find(x=>x.day===day);activeSession={id:crypto.randomUUID(),start:Date.now(),week:week(),workout:w.day,exercises:w.exercises.map(e=>({section:e[0],name:e[1],sets:e[2],target:e[3],unit:e[4],type:e[5],logs:Array.from({length:e[2]},(_,i)=>({set:i+1,value:"",reps:e[3],done:false}))}))};renderSession()}
 function renderSession(){activeView="today";el("today").innerHTML=`<div class="card"><h2>${activeSession.workout}</h2><button class="green" onclick="openRecovery()">Finish workout</button></div>${activeSession.exercises.map((e,ei)=>`<div class="card"><h3>${e.name}</h3><p class="muted">${e.section} · ${e.sets} x ${e.target} ${e.unit}</p><textarea placeholder="Notes" onchange="activeSession.exercises[${ei}].comment=this.value"></textarea>${e.logs.map((l,li)=>`<div class="setrow"><span>${li+1}</span><input placeholder="${label1(e)}" onchange="activeSession.exercises[${ei}].logs[${li}].value=this.value"><input placeholder="${label2(e)}" value="${l.reps}" onchange="activeSession.exercises[${ei}].logs[${li}].reps=this.value"><button onclick="activeSession.exercises[${ei}].logs[${li}].done=!activeSession.exercises[${ei}].logs[${li}].done;this.classList.toggle('done')">✓</button></div>`).join("")}</div>`).join("")}`;show("today",true)}
 function label1(e){return e.type==="note"?"Note":e.type==="speed"?"Speed Level":e.type==="incline"?"Incline Level":(e.type==="bodyweight"||e.type==="duration_bodyweight")?"Body Weight":e.type==="duration"?"Duration":"kg"} function label2(e){return e.type==="note"?"":(e.type==="duration"||e.type==="duration_bodyweight")?"min/sec":e.type==="speed"?"Speed/round":e.type==="incline"?"duration":"reps"}
@@ -99,20 +99,132 @@ async function renderProgress(id=currentProfile.id){const {data:sessions=[]}=awa
 function drawCharts(logs,recovery){drawChart("kgChart",group(logs,"main","metric_value"));drawChart("speedChart",group(logs,"speed","metric_value"));drawChart("durationChart",group(logs,"duration_bodyweight","reps_or_duration"));drawChart("recoveryChart",recovery.reduce((a,r)=>{a[r.week]=(a[r.week]||0)+1;return a},{}))}
 function group(logs,type,field){const m={};logs.filter(x=>x.exercise_type===type).forEach(x=>m[x.week]=Math.max(m[x.week]||0,Number(x[field])||0));return m}
 function drawChart(id,data){const c=el(id);if(!c)return;const ctx=c.getContext("2d");c.width=c.clientWidth*2;c.height=260*2;ctx.scale(2,2);ctx.clearRect(0,0,c.width,c.height);const keys=Object.keys(data).sort((a,b)=>a-b),vals=keys.map(k=>data[k]),max=Math.max(1,...vals);ctx.strokeStyle="#60a5fa";ctx.lineWidth=3;ctx.beginPath();keys.forEach((k,i)=>{const x=30+i*((c.clientWidth-60)/Math.max(1,keys.length-1)),y=220-(vals[i]/max)*170;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);ctx.fillStyle="#94a3b8";ctx.fillText("W"+k,x-8,240);ctx.fillText(String(vals[i]),x-8,y-8)});ctx.stroke()}
-async function renderClients(){if(currentProfile.role!=="coach"){el("clients").innerHTML="";return}const {data:clients=[]}=await supabaseClient.from("profiles").select("*").eq("coach_id",currentProfile.id).order("full_name",{ascending:true});el("clients").innerHTML=`<div class="card"><h2>Clients</h2><p class="muted">Assign Forge Hybrid, 21-Day Metabolic Reset, or StrongLifts 5×5. Lock weeks, open profiles, and comment on exercises.</p></div>${clients.map(c=>`<div class="card"><div class="row space"><div><h2>${c.full_name||c.email}</h2><p class="muted">${c.email||""}</p><p>DOB: ${c.date_of_birth||"Not added"}</p><p>Emergency: ${c.emergency_contact_name||"Not added"} ${c.emergency_contact_phone||""}</p></div><button class="green" onclick="openClient('${c.id}')">Open profile</button></div></div>`).join("")||"<div class='card'>No clients yet.</div>"}`}
-async function openClient(id){const {data:p}=await supabaseClient.from("profiles").select("*").eq("id",id).single();const st=await ensureClientState(id);modalBody.innerHTML=`<h2>${p.full_name||p.email}</h2><p class="muted">${p.email}</p>
-<label>Assign program</label>
-<select id="clientProgram">
-<option value="forge_hybrid" ${st.program_key==="forge_hybrid"||!st.program_key?"selected":""}>Forge Hybrid 3-Day</option>
-<option value="metabolic_21" ${st.program_key==="metabolic_21"?"selected":""}>21-Day Metabolic Reset</option>
-<option value="stronglifts_5x5" ${st.program_key==="stronglifts_5x5"?"selected":""}>StrongLifts 5×5</option>
-</select>
-<label>Start/current week</label><input id="clientWeek" type="number" min="1" max="24" value="${st.current_week}">
-<label>Lock week</label><select id="clientLock"><option value="false" ${!st.week_locked?"selected":""}>Auto progress after 3 workouts</option><option value="true" ${st.week_locked?"selected":""}>Locked by coach</option></select>
-<button class="green full" onclick="saveClientWeek('${id}')">Save assignment</button><br><br>
-<button class="secondary full" onclick="showClientProgress('${id}')">Show progress charts</button>
-<h3>Coach exercise comment</h3><input id="commentExercise" placeholder="Exercise name"><textarea id="commentText" placeholder="Comment/cue"></textarea><button class="green full" onclick="saveCoachComment('${id}')">Save comment</button>`;el("modal").classList.add("show")}
-async function saveClientWeek(id){await supabaseClient.from("client_states").upsert({client_id:id,current_week:Number(el("clientWeek").value),week_locked:el("clientLock").value==="true",program_key:el("clientProgram").value});alert("Client week updated")}
+async function renderClients(){
+  if(currentProfile.role!=="coach"){el("clients").innerHTML="";return}
+
+  const {data:clients=[],error}=await supabaseClient
+    .from("profiles")
+    .select("*")
+    .eq("coach_id",currentProfile.id)
+    .order("full_name",{ascending:true});
+
+  if(error){
+    el("clients").innerHTML=`<div class="card"><h2>Clients</h2><p class="muted">Could not load clients: ${error.message}</p></div>`;
+    return;
+  }
+
+  el("clients").innerHTML=`
+    <div class="card">
+      <h2>Clients</h2>
+      <p class="muted">Open a client profile to assign Forge Hybrid, 21-Day Metabolic Reset, or StrongLifts 5×5. You can start them from any week, lock a week, review progress, view charts, and add exercise comments.</p>
+    </div>
+    ${clients.map(c=>`
+      <div class="card">
+        <div class="row space">
+          <div>
+            <h2>${c.full_name||c.email}</h2>
+            <p class="muted">${c.email||""}</p>
+            <span class="pill">DOB: ${c.date_of_birth||"Not added"}</span>
+            <span class="pill">Emergency: ${c.emergency_contact_name||"Not added"} ${c.emergency_contact_phone||""}</span>
+          </div>
+          <button class="green" onclick="openClient('${c.id}')">Open profile</button>
+        </div>
+      </div>
+    `).join("") || "<div class='card'>No clients yet.</div>"}
+  `;
+}
+
+async function openClient(id){
+  const {data:p,error:pErr}=await supabaseClient.from("profiles").select("*").eq("id",id).single();
+  if(pErr){ alert(pErr.message); return; }
+
+  const st=await ensureClientState(id);
+  const assignedProgram = st.program_key || "forge_hybrid";
+
+  modalBody.innerHTML=`
+    <div class="card banner">
+      <h2>${p.full_name||p.email}</h2>
+      <p class="muted">${p.email}</p>
+      <span class="pill">Client profile</span>
+      <span class="pill ${st.week_locked?"yellow":"green"}">Week ${st.current_week || 1} ${st.week_locked?"Locked":"Auto progress"}</span>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Client Details</h3>
+        <p><b>Email:</b> ${p.email || "Not added"}</p>
+        <p><b>Date of birth:</b> ${p.date_of_birth || "Not added"}</p>
+        <p><b>Emergency contact:</b> ${p.emergency_contact_name || "Not added"} ${p.emergency_contact_phone || ""}</p>
+      </div>
+
+      <div class="card">
+        <h3>Program Assignment</h3>
+        <p class="muted small">Choose which program this client follows. You can start them from any week and lock the week if you do not want automatic progression.</p>
+
+        <label class="small muted">Assigned program</label>
+        <select id="clientProgram">
+          <option value="forge_hybrid" ${assignedProgram==="forge_hybrid"?"selected":""}>Forge Hybrid 3-Day</option>
+          <option value="metabolic_21" ${assignedProgram==="metabolic_21"?"selected":""}>21-Day Metabolic Reset</option>
+          <option value="stronglifts_5x5" ${assignedProgram==="stronglifts_5x5"?"selected":""}>StrongLifts 5×5</option>
+        </select>
+
+        <label class="small muted">Start/current week</label>
+        <input id="clientWeek" type="number" min="1" max="24" value="${st.current_week || 1}">
+
+        <label class="small muted">Progression control</label>
+        <select id="clientLock">
+          <option value="false" ${!st.week_locked?"selected":""}>Auto progress after 3 completed workouts</option>
+          <option value="true" ${st.week_locked?"selected":""}>Locked by coach</option>
+        </select>
+
+        <button class="green full" onclick="saveClientWeek('${id}')">Save program assignment</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Progress</h3>
+        <p class="muted">Open this client’s workout history, completed sessions, workout duration, and progress charts.</p>
+        <button class="secondary full" onclick="showClientProgress('${id}')">Open progress dashboard</button>
+      </div>
+
+      <div class="card">
+        <h3>Charts</h3>
+        <p class="muted">Charts include kg gain/week, speed gain/week, plank or duration progress/week, and recovery check-in trends.</p>
+        <button class="secondary full" onclick="showClientProgress('${id}')">View charts</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Coach Exercise Comment</h3>
+      <p class="muted small">Add a cue or coaching note for a specific exercise. Example: “Keep your chest tall on squats.”</p>
+      <input id="commentExercise" placeholder="Exercise name">
+      <textarea id="commentText" placeholder="Comment or cue"></textarea>
+      <button class="green full" onclick="saveCoachComment('${id}')">Save comment</button>
+    </div>
+  `;
+  el("modal").classList.add("show");
+}
+
+async function saveClientWeek(id){
+  const payload={
+    client_id:id,
+    current_week:Number(el("clientWeek").value),
+    week_locked:el("clientLock").value==="true",
+    program_key:el("clientProgram").value
+  };
+
+  const {error}=await supabaseClient.from("client_states").upsert(payload);
+
+  if(error){
+    alert("Could not save assignment: " + error.message);
+    return;
+  }
+
+  alert("Program assignment saved.");
+  closeModal();
+  await renderClients();
+});alert("Client week updated")}
 async function showClientProgress(id){closeModal();activeView="progress";await renderProgress(id);show("progress",true)}
 async function saveCoachComment(id){await supabaseClient.from("coach_comments").insert({client_id:id,coach_id:currentProfile.id,exercise:el("commentExercise").value,comment:el("commentText").value});alert("Comment saved")}
 function previewWorkout(day){const w=currentProgram().find(x=>x.day===day);modalBody.innerHTML=`<h2>${w.day}</h2>${w.exercises.map(e=>`<div class="exercise"><b>${e[0]}:</b> ${e[1]} · ${e[2]} x ${e[3]} ${e[4]}</div>`).join("")}`;el("modal").classList.add("show")} function closeModal(){el("modal").classList.remove("show")} function renderRequests(){el("requests").innerHTML=`<div class="card"><h2>Requests</h2><p class="muted">Substitution requests and coach feedback will live here.</p></div>`} function renderSettings(){el("settings").innerHTML=`<div class="card"><h2>Settings</h2><p class="muted">${currentUser.email} · ${currentProfile.role}</p><button class="red full" onclick="logout()">Force log out</button></div>`}
