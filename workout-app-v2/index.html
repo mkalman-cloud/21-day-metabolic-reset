@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Forge v4.2 Phase 2</title>
+  <title>Forge v4.3 Phase 3</title>
   <meta name="theme-color" content="#020817" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
@@ -30,7 +30,7 @@
     .hide{display:none!important}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.space{justify-content:space-between}
     .pill{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:var(--muted);font-size:12px;margin:3px;background:#07111f}.pill.green{color:#bbf7d0;border-color:#14532d}.pill.yellow{color:#fde68a;border-color:#713f12}.pill.red{color:#fecdd3;border-color:#7f1d1d}
     .exercise{border:1px solid var(--line);border-radius:16px;padding:12px;margin:10px 0;background:#08111f}.miniTabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:12px 0}.miniTab{background:#111827;color:var(--muted);border:1px solid var(--line)}.miniTab.active{background:#e5e7eb;color:#020817}.alertBox{border-left:4px solid var(--yellow);padding:10px;background:#111827;border-radius:12px;margin:8px 0}.alertBox.redFlag{border-left-color:var(--red)}
-    .setrow{display:grid;grid-template-columns:36px 1fr 1fr 46px;gap:8px;margin:8px 0;align-items:center}.done{background:var(--green)}
+    .setrow{display:grid;grid-template-columns:36px 1fr 1fr 46px;gap:8px;margin:8px 0;align-items:center}.done{background:var(--green)}.sessionBar{position:sticky;top:78px;z-index:8;background:#0f172a;border:1px solid var(--line);border-radius:18px;padding:12px;margin-bottom:12px}.progressLine{height:8px;background:#07111f;border-radius:999px;overflow:hidden;border:1px solid var(--line)}.progressFill{height:100%;background:var(--green);width:0%}.logHint{font-size:12px;color:var(--muted);margin-top:-4px;margin-bottom:8px}
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:flex-end;z-index:50}.modal.show{display:flex}
     .sheet{width:100%;max-width:980px;margin:0 auto;background:#0f172a;border:1px solid var(--line);border-radius:24px 24px 0 0;padding:16px;max-height:88vh;overflow:auto}
     canvas{width:100%;height:240px;background:#07111f;border:1px solid var(--line);border-radius:16px}
@@ -140,9 +140,9 @@ async function init(){
     supabaseClient=window.supabase.createClient(window.STRONG_WEEK_CONFIG.supabaseUrl,window.STRONG_WEEK_CONFIG.supabaseAnonKey);
     const {data,error}=await supabaseClient.auth.getSession(); if(error) throw error;
     currentUser=data.session?.user||null;
-    if(currentUser){await loadProfile(); await loadClientState(currentProfile.id);}
+    if(currentUser){await loadProfile(); await loadClientState(currentProfile.id); loadActiveSession();}
     showStatus("Forge Cloud ready"); hideStatus(); render();
-    supabaseClient.auth.onAuthStateChange(async(e,s)=>{currentUser=s?.user||null;if(currentUser){await loadProfile();await loadClientState(currentProfile.id)}render()});
+    supabaseClient.auth.onAuthStateChange(async(e,s)=>{currentUser=s?.user||null;if(currentUser){await loadProfile();await loadClientState(currentProfile.id);loadActiveSession()}render()});
   }catch(err){console.error(err);showStatus(err.message||String(err),false)}
 }
 
@@ -231,16 +231,17 @@ function renderPhase(){
 function todayWorkout(){const d=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date().getDay()];return program().schedule.find(w=>w.schedule===d)||program().schedule[0]}
 function workoutCard(w){return `<div class="card"><div class="row space"><div><h2>${w.day}</h2><span class="pill">${w.schedule}</span><span class="pill">${program().name}</span><span class="pill">Week ${week()}</span></div><div class="row"><button class="secondary" onclick="previewWorkout('${esc(w.day)}')">Open</button><button class="green" onclick="preWorkoutCheckin('${esc(w.day)}')">Start</button></div></div></div>`}
 
-function renderToday(){el("today").innerHTML=`<div class="card"><h2>Today</h2><p class="muted">Your assigned program is <b>${program().name}</b>.</p></div>${activeSession?`<div class="card banner"><h2>Workout in progress</h2><p>${activeSession.workout}</p><button class="green" onclick="renderSession()">Resume</button></div>`:workoutCard(todayWorkout())}`}
-function renderProgram(){el("program").innerHTML=`<div class="card"><h2>Assigned Program: ${program().name}</h2><p class="muted">${program().description}</p></div>${program().schedule.map(workoutCard).join("")}`}
-
-function esc(s){return String(s).replaceAll("'","\\'")}
-function findWorkout(day){return program().schedule.find(x=>x.day===day)}
-
-function previewWorkout(day){
-  const w=findWorkout(day);
-  el("modalBody").innerHTML=`<h2>${w.day}</h2><p class="muted">${program().name}</p>${w.exercises.map(e=>`<div class="exercise"><b>${e[0]}:</b> ${e[1]} · ${e[2]} x ${e[3]} ${e[4]}</div>`).join("")}`;
-  el("modal").classList.add("show");
+function renderToday(){
+  el("today").innerHTML=`
+    <div class="card">
+      <h2>Today</h2>
+      <p class="muted">Your assigned program is <b>${program().name}</b>.</p>
+    </div>
+    ${activeSession
+      ? `<div class="card banner"><h2>Workout in progress</h2><p>${activeSession.workout}</p><p class="muted">${completedSetCount()} of ${totalSetCount()} sets completed.</p><button class="green" onclick="renderSession()">Resume workout</button></div>`
+      : workoutCard(todayWorkout())
+    }
+  `;
 }
 
 function preWorkoutCheckin(day){
@@ -255,17 +256,86 @@ function preWorkoutCheckin(day){
 
 function startWorkout(day){
   const w=findWorkout(day);
-  activeSession={id:crypto.randomUUID(),start:Date.now(),week:week(),program_key:programKey(),program_name:program().name,workout:w.day,
-    pre:{energy:el("preEnergy")?.value||"",sleep:el("preSleep")?.value||"",body:el("preBody")?.value||""},
-    exercises:w.exercises.map(e=>({section:e[0],name:e[1],sets:e[2],target:e[3],unit:e[4],type:e[5],comment:"",logs:Array.from({length:e[2]},(_,i)=>({set:i+1,value:"",reps:e[3],done:false}))}))
+  activeSession={
+    id:crypto.randomUUID(),
+    start:Date.now(),
+    week:week(),
+    program_key:programKey(),
+    program_name:program().name,
+    workout:w.day,
+    pre:{
+      energy:el("preEnergy")?.value||"",
+      sleep:el("preSleep")?.value||"",
+      body:el("preBody")?.value||""
+    },
+    exercises:w.exercises.map(e=>({
+      section:e[0],
+      name:e[1],
+      sets:e[2],
+      target:e[3],
+      unit:e[4],
+      type:e[5],
+      comment:"",
+      logs:Array.from({length:e[2]},(_,i)=>({
+        set:i+1,
+        value:"",
+        reps:e[3],
+        done:false
+      }))
+    }))
   };
-  closeModal(); renderSession();
+  saveActiveSession();
+  closeModal();
+  renderSession();
 }
 
 function renderSession(){
   activeView="today";
-  el("today").innerHTML=`<div class="card"><div class="row space"><div><h2>${activeSession.workout}</h2><p class="muted">${activeSession.program_name} · Week ${activeSession.week}</p></div><button class="green" onclick="postWorkoutCheckin()">Finish workout</button></div></div>
-  ${activeSession.exercises.map((e,ei)=>`<div class="card"><h3>${e.name}</h3><p class="muted">${e.section} · ${e.sets} x ${e.target} ${e.unit}</p><textarea placeholder="Notes for this exercise" onchange="activeSession.exercises[${ei}].comment=this.value"></textarea>${e.logs.map((l,li)=>`<div class="setrow"><span>${li+1}</span><input placeholder="${label1(e)}" onchange="activeSession.exercises[${ei}].logs[${li}].value=this.value"><input placeholder="${label2(e)}" value="${l.reps}" onchange="activeSession.exercises[${ei}].logs[${li}].reps=this.value"><button onclick="activeSession.exercises[${ei}].logs[${li}].done=!activeSession.exercises[${ei}].logs[${li}].done;this.classList.toggle('done')">✓</button></div>`).join("")}</div>`).join("")}`;
+  const pct=sessionCompletionPercent();
+  const elapsed=Math.max(1,Math.round((Date.now()-activeSession.start)/60000));
+
+  el("today").innerHTML=`
+    <div class="sessionBar">
+      <div class="row space">
+        <div>
+          <h2>${activeSession.workout}</h2>
+          <p class="muted">${activeSession.program_name} · Week ${activeSession.week} · ${elapsed} min so far</p>
+        </div>
+        <div class="row">
+          <button class="secondary" onclick="cancelWorkout()">Cancel</button>
+          <button class="green" onclick="postWorkoutCheckin()">Finish workout</button>
+        </div>
+      </div>
+      <div class="progressLine"><div class="progressFill" style="width:${pct}%"></div></div>
+      <p class="small muted">${completedSetCount()} of ${totalSetCount()} sets completed · ${pct}%</p>
+    </div>
+
+    ${activeSession.exercises.map((e,ei)=>`
+      <div class="card">
+        <div class="row space">
+          <div>
+            <h3>${e.name}</h3>
+            <p class="muted">${e.section} · Target: ${e.sets} x ${e.target} ${e.unit}</p>
+          </div>
+          <span class="pill">${e.type}</span>
+        </div>
+
+        <label>Exercise note</label>
+        <textarea placeholder="Notes for this exercise" onchange="activeSession.exercises[${ei}].comment=this.value;saveActiveSession()">${e.comment||""}</textarea>
+
+        <div class="logHint">${label1(e)} + ${label2(e)} are saved automatically as you type.</div>
+
+        ${e.logs.map((l,li)=>`
+          <div class="setrow">
+            <span>${li+1}</span>
+            <input placeholder="${label1(e)}" value="${l.value||""}" onchange="saveSet(${ei},${li},'value',this.value)">
+            <input placeholder="${label2(e)}" value="${l.reps||""}" onchange="saveSet(${ei},${li},'reps',this.value)">
+            <button class="${l.done?'done':''}" onclick="toggleSet(${ei},${li})">✓</button>
+          </div>
+        `).join("")}
+      </div>
+    `).join("")}
+  `;
   show("today",true);
 }
 
@@ -281,14 +351,70 @@ function postWorkoutCheckin(){
 }
 
 async function finishWorkout(){
+  if(!activeSession)return alert("No active workout.");
+
   const duration=Math.round((Date.now()-activeSession.start)/60000)||1;
-  const {data:s,error}=await supabaseClient.from("workout_sessions").insert({client_id:currentProfile.id,coach_id:currentProfile.coach_id,week:activeSession.week,program_key:activeSession.program_key,workout_name:activeSession.workout,duration_minutes:duration}).select().single();
-  if(error) return alert(error.message);
-  const rows=activeSession.exercises.flatMap(e=>e.logs.map(l=>({session_id:s.id,client_id:currentProfile.id,exercise:e.name,exercise_type:e.type,week:activeSession.week,set_number:l.set,metric_value:Number(l.value)||0,reps_or_duration:Number(l.reps)||0,unit:e.unit,comment:e.comment||""})));
-  await supabaseClient.from("exercise_logs").insert(rows);
-  await supabaseClient.from("recovery_logs").insert({session_id:s.id,client_id:currentProfile.id,week:activeSession.week,pre_energy:activeSession.pre.energy,pre_sleep:activeSession.pre.sleep,pre_body_comfort:activeSession.pre.body,post_body_comfort:el("postBody").value,workout_difficulty:el("postDifficulty").value});
+  const completed=completedSetCount();
+  const total=totalSetCount();
+
+  if(completed===0){
+    if(!confirm("No completed sets are ticked. Save workout anyway?")) return;
+  }
+
+  const {data:s,error}=await supabaseClient.from("workout_sessions").insert({
+    client_id:currentProfile.id,
+    coach_id:currentProfile.coach_id,
+    week:activeSession.week,
+    program_key:activeSession.program_key,
+    workout_name:activeSession.workout,
+    duration_minutes:duration
+  }).select().single();
+
+  if(error)return alert(error.message);
+
+  const rows=activeSession.exercises.flatMap(e=>e.logs
+    .filter(l=>l.done || l.value || l.reps)
+    .map(l=>({
+      session_id:s.id,
+      client_id:currentProfile.id,
+      exercise:e.name,
+      exercise_type:e.type,
+      week:activeSession.week,
+      set_number:l.set,
+      metric_value:Number(l.value)||0,
+      reps_or_duration:Number(l.reps)||0,
+      unit:e.unit,
+      comment:e.comment||""
+    }))
+  );
+
+  if(rows.length){
+    const {error:logError}=await supabaseClient.from("exercise_logs").insert(rows);
+    if(logError)return alert("Workout saved but exercise logs failed: "+logError.message);
+  }
+
+  const {error:recError}=await supabaseClient.from("recovery_logs").insert({
+    session_id:s.id,
+    client_id:currentProfile.id,
+    week:activeSession.week,
+    pre_energy:activeSession.pre.energy,
+    pre_sleep:activeSession.pre.sleep,
+    pre_body_comfort:activeSession.pre.body,
+    post_body_comfort:el("postBody").value,
+    workout_difficulty:el("postDifficulty").value
+  });
+
+  if(recError)return alert("Workout saved but recovery log failed: "+recError.message);
+
   await maybeProgressWeek(currentProfile.id);
-  activeSession=null; closeModal(); alert("Workout saved."); await loadClientState(currentProfile.id); activeView=isCoach()?"clients":"profile"; render();
+
+  activeSession=null;
+  clearActiveSession();
+  closeModal();
+  alert("Workout saved. Completed "+completed+" of "+total+" sets in "+duration+" min.");
+  await loadClientState(currentProfile.id);
+  activeView=isCoach()?"clients":"profile";
+  render();
 }
 
 async function maybeProgressWeek(clientId){
@@ -419,7 +545,7 @@ async function openClient(id,section="details"){
         <div class="card"><h3>Current Week</h3><h1>${st.current_week||1}</h1><p class="muted">${pName}</p></div>
         <div class="card"><h3>Last Workout Duration</h3><h1>${lastSession?.duration_minutes||0} min</h1><p class="muted">${lastSession?.workout_name||"No workout yet"}</p></div>
       </div>
-      <div class="card"><h3>Workout History</h3>${sessions.map(s=>`<div class="exercise"><b>${s.workout_name}</b><p class="muted">Week ${s.week} · ${s.duration_minutes} min · ${new Date(s.created_at).toLocaleString()}</p></div>`).join("")||"<p class='muted'>No workouts yet.</p>"}</div>`;
+      <div class="card"><h3>Workout History</h3>${sessions.map(s=>`<div class="exercise"><b>${s.workout_name}</b><p class="muted">Week ${s.week} · ${s.duration_minutes} min · ${new Date(s.created_at).toLocaleString()}</p><button class="secondary" onclick="openSessionDetails('${s.id}')">Open workout log</button></div>`).join("")||"<p class='muted'>No workouts yet.</p>"}</div>`;
   }
 
   if(section==="charts"){
@@ -454,6 +580,43 @@ async function openClient(id,section="details"){
   el("modal").classList.add("show");
 
   if(section==="charts"){ await renderChartsOnly(id); }
+}
+
+async function openSessionDetails(sessionId){
+  const {data:session,error:sErr}=await supabaseClient.from("workout_sessions").select("*").eq("id",sessionId).single();
+  if(sErr)return alert(sErr.message);
+  const {data:logs=[]}=await supabaseClient.from("exercise_logs").select("*").eq("session_id",sessionId).order("id",{ascending:true});
+  const {data:rec=[]}=await supabaseClient.from("recovery_logs").select("*").eq("session_id",sessionId).maybeSingle();
+
+  const grouped={};
+  logs.forEach(l=>{
+    if(!grouped[l.exercise]) grouped[l.exercise]=[];
+    grouped[l.exercise].push(l);
+  });
+
+  el("modalBody").innerHTML=`
+    <div class="card banner">
+      <h2>${session.workout_name}</h2>
+      <p class="muted">Week ${session.week} · ${session.duration_minutes} min · ${new Date(session.created_at).toLocaleString()}</p>
+    </div>
+
+    <div class="grid">
+      <div class="card"><h3>Pre-workout</h3><p><b>Energy:</b> ${rec?.pre_energy||"N/A"}</p><p><b>Sleep:</b> ${rec?.pre_sleep||"N/A"}</p><p><b>Body comfort:</b> ${rec?.pre_body_comfort||"N/A"}</p></div>
+      <div class="card"><h3>Post-workout</h3><p><b>Body comfort:</b> ${rec?.post_body_comfort||"N/A"}</p><p><b>Difficulty:</b> ${rec?.workout_difficulty||"N/A"}</p></div>
+    </div>
+
+    <div class="card">
+      <h3>Exercise Log</h3>
+      ${Object.keys(grouped).map(ex=>`
+        <div class="exercise">
+          <h3>${ex}</h3>
+          ${grouped[ex].map(l=>`<p class="muted">Set ${l.set_number}: ${l.metric_value||""} ${l.unit||""} · ${l.reps_or_duration||""}</p>`).join("")}
+          ${grouped[ex][0]?.comment?`<p><b>Note:</b> ${grouped[ex][0].comment}</p>`:""}
+        </div>
+      `).join("") || "<p class='muted'>No exercise logs saved.</p>"}
+    </div>
+  `;
+  el("modal").classList.add("show");
 }
 
 async function markRequestResolved(requestId, clientId){
