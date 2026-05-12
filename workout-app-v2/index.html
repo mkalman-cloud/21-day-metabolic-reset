@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Forge v4</title>
+  <title>Forge v4.2 Phase 2</title>
   <meta name="theme-color" content="#020817" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
@@ -29,7 +29,7 @@
     .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}.tab{background:#111827;color:var(--muted);border:1px solid var(--line)}.tab.active{background:white;color:#020817}
     .hide{display:none!important}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.space{justify-content:space-between}
     .pill{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:var(--muted);font-size:12px;margin:3px;background:#07111f}.pill.green{color:#bbf7d0;border-color:#14532d}.pill.yellow{color:#fde68a;border-color:#713f12}.pill.red{color:#fecdd3;border-color:#7f1d1d}
-    .exercise{border:1px solid var(--line);border-radius:16px;padding:12px;margin:10px 0;background:#08111f}
+    .exercise{border:1px solid var(--line);border-radius:16px;padding:12px;margin:10px 0;background:#08111f}.miniTabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:12px 0}.miniTab{background:#111827;color:var(--muted);border:1px solid var(--line)}.miniTab.active{background:#e5e7eb;color:#020817}.alertBox{border-left:4px solid var(--yellow);padding:10px;background:#111827;border-radius:12px;margin:8px 0}.alertBox.redFlag{border-left-color:var(--red)}
     .setrow{display:grid;grid-template-columns:36px 1fr 1fr 46px;gap:8px;margin:8px 0;align-items:center}.done{background:var(--green)}
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:flex-end;z-index:50}.modal.show{display:flex}
     .sheet{width:100%;max-width:980px;margin:0 auto;background:#0f172a;border:1px solid var(--line);border-radius:24px 24px 0 0;padding:16px;max-height:88vh;overflow:auto}
@@ -299,29 +299,174 @@ async function maybeProgressWeek(clientId){
 
 async function renderClients(){
   if(!isCoach()){el("clients").innerHTML="";return}
-  const {data:clients=[],error}=await supabaseClient.from("profiles").select("*").eq("coach_id",currentProfile.id).order("full_name",{ascending:true});
-  if(error){el("clients").innerHTML=`<div class="card"><h2>Clients</h2><p>${error.message}</p></div>`;return}
-  el("clients").innerHTML=`<div class="card"><h2>Clients</h2><p class="muted">Open a client profile to assign programs, lock weeks, view progress/charts, review pain alerts, and manage workout modification requests.</p></div>${clients.map(c=>`<div class="card"><div class="row space"><div><h2>${c.full_name||c.email}</h2><p class="muted">${c.email}</p><span class="pill">DOB: ${c.date_of_birth||"Not added"}</span><span class="pill">Emergency: ${c.emergency_contact_name||"Not added"} ${c.emergency_contact_phone||""}</span></div><button class="green" onclick="openClient('${c.id}')">Open profile</button></div></div>`).join("")||"<div class='card'>No clients yet.</div>"}`;
+
+  const {data:clients=[],error}=await supabaseClient
+    .from("profiles")
+    .select("*")
+    .eq("coach_id",currentProfile.id)
+    .order("full_name",{ascending:true});
+
+  if(error){
+    el("clients").innerHTML=`<div class="card"><h2>Clients</h2><p>${error.message}</p></div>`;
+    return;
+  }
+
+  const {data:states=[]}=await supabaseClient.from("client_states").select("*");
+  const stateFor = id => states.find(s=>s.client_id===id) || {};
+
+  el("clients").innerHTML=`
+    <div class="card">
+      <h2>Clients</h2>
+      <p class="muted">Open a client profile to manage details, program assignment, progress, charts, recovery alerts, workout modification requests, and coach comments.</p>
+    </div>
+    ${clients.map(c=>{
+      const st=stateFor(c.id);
+      const pName=PROGRAMS[st.program_key||"forge_hybrid"]?.name || "Forge Hybrid 3-Day";
+      return `
+        <div class="card">
+          <div class="row space">
+            <div>
+              <h2>${c.full_name||c.email}</h2>
+              <p class="muted">${c.email}</p>
+              <span class="pill">${pName}</span>
+              <span class="pill">Week ${st.current_week||1}</span>
+              <span class="pill ${st.week_locked?"yellow":"green"}">${st.week_locked?"Locked":"Auto progression"}</span>
+            </div>
+            <button class="green" onclick="openClient('${c.id}','details')">Open profile</button>
+          </div>
+        </div>
+      `;
+    }).join("") || "<div class='card'>No clients yet.</div>"}
+  `;
 }
 
-async function openClient(id){
-  const {data:p,error}=await supabaseClient.from("profiles").select("*").eq("id",id).single(); if(error)return alert(error.message);
+async function openClient(id,section="details"){
+  const {data:p,error}=await supabaseClient.from("profiles").select("*").eq("id",id).single();
+  if(error)return alert(error.message);
+
   const st=await loadClientState(id);
   const {data:mods=[]}=await supabaseClient.from("modification_requests").select("*").eq("client_id",id).order("created_at",{ascending:false});
   const {data:sessions=[]}=await supabaseClient.from("workout_sessions").select("*").eq("client_id",id).order("created_at",{ascending:false});
   const {data:recovery=[]}=await supabaseClient.from("recovery_logs").select("*").eq("client_id",id).order("created_at",{ascending:false});
-  el("modalBody").innerHTML=`<div class="card banner"><h2>${p.full_name||p.email}</h2><p class="muted">${p.email}</p><span class="pill">${PROGRAMS[st.program_key||"forge_hybrid"]?.name||"Forge Hybrid"}</span><span class="pill ${st.week_locked?"yellow":"green"}">Week ${st.current_week||1} ${st.week_locked?"Locked":"Auto"}</span></div>
-  <div class="grid">
-    <div class="card"><h3>Client Details</h3><p><b>DOB:</b> ${p.date_of_birth||"Not added"}</p><p><b>Emergency:</b> ${p.emergency_contact_name||"Not added"} ${p.emergency_contact_phone||""}</p></div>
-    <div class="card"><h3>Program Assignment</h3><label>Program</label><select id="clientProgram"><option value="forge_hybrid" ${st.program_key==="forge_hybrid"?"selected":""}>Forge Hybrid 3-Day</option><option value="metabolic_21" ${st.program_key==="metabolic_21"?"selected":""}>21-Day Metabolic Reset</option><option value="stronglifts_5x5" ${st.program_key==="stronglifts_5x5"?"selected":""}>StrongLifts 5×5</option></select><label>Current/start week</label><input id="clientWeek" type="number" min="1" max="24" value="${st.current_week||1}"><label>Progression</label><select id="clientLock"><option value="false" ${!st.week_locked?"selected":""}>Auto progress after 3 workouts</option><option value="true" ${st.week_locked?"selected":""}>Locked by coach</option></select><button class="green full" onclick="saveClientAssignment('${id}')">Save assignment</button></div>
-  </div>
-  <div class="grid">
-    <div class="card"><h3>Progress</h3><p class="muted">${sessions.length} completed workouts. Last workout: ${sessions[0]?.duration_minutes||0} min.</p><button class="secondary full" onclick="openClientProgress('${id}')">Open progress + charts</button></div>
-    <div class="card"><h3>Recovery / Pain Alerts</h3>${recovery.slice(0,3).map(r=>`<div class="exercise"><b>${r.pre_body_comfort||"Body comfort not recorded"}</b><p class="muted">After: ${r.post_body_comfort||"Not recorded"} · Difficulty: ${r.workout_difficulty||"Not recorded"}</p></div>`).join("")||"<p class='muted'>No recovery logs yet.</p>"}</div>
-  </div>
-  <div class="card"><h3>Workout Modification Requests</h3>${mods.map(m=>`<div class="exercise"><b>${m.status||"open"}</b><p>${m.request_text}</p><p class="muted">${new Date(m.created_at).toLocaleString()}</p></div>`).join("")||"<p class='muted'>No requests yet.</p>"}</div>
-  <div class="card"><h3>Coach Exercise Comment</h3><input id="commentExercise" placeholder="Exercise name"><textarea id="commentText" placeholder="Comment/cue"></textarea><button class="green full" onclick="saveCoachComment('${id}')">Save comment</button></div>`;
+  const {data:comments=[]}=await supabaseClient.from("coach_comments").select("*").eq("client_id",id).order("created_at",{ascending:false});
+
+  const pKey=st.program_key||"forge_hybrid";
+  const pName=PROGRAMS[pKey]?.name||"Forge Hybrid 3-Day";
+  const lastSession=sessions[0];
+  const redFlags=recovery
+    .filter(r=>r.pre_energy==="Low energy" || r.pre_body_comfort==="Aches/pains or very stiff" || r.post_body_comfort==="Worse than before" || r.workout_difficulty==="I am buggered")
+    .slice(0,6);
+
+  const nav=`
+    <div class="miniTabs">
+      <button class="miniTab ${section==="details"?"active":""}" onclick="openClient('${id}','details')">Client Details</button>
+      <button class="miniTab ${section==="assignment"?"active":""}" onclick="openClient('${id}','assignment')">Program Assignment</button>
+      <button class="miniTab ${section==="progress"?"active":""}" onclick="openClient('${id}','progress')">Progress</button>
+      <button class="miniTab ${section==="charts"?"active":""}" onclick="openClient('${id}','charts')">Charts</button>
+      <button class="miniTab ${section==="alerts"?"active":""}" onclick="openClient('${id}','alerts')">Recovery / Pain</button>
+      <button class="miniTab ${section==="requests"?"active":""}" onclick="openClient('${id}','requests')">Modification Requests</button>
+      <button class="miniTab ${section==="comments"?"active":""}" onclick="openClient('${id}','comments')">Coach Comments</button>
+    </div>`;
+
+  let body="";
+
+  if(section==="details"){
+    body=`
+      <div class="grid">
+        <div class="card">
+          <h3>Client Details</h3>
+          <p><b>Name:</b> ${p.full_name||"Not added"}</p>
+          <p><b>Email:</b> ${p.email||"Not added"}</p>
+          <p><b>DOB:</b> ${p.date_of_birth||"Not added"}</p>
+          <p><b>Emergency:</b> ${p.emergency_contact_name||"Not added"} ${p.emergency_contact_phone||""}</p>
+        </div>
+        <div class="card">
+          <h3>Current Training State</h3>
+          <p><b>Program:</b> ${pName}</p>
+          <p><b>Current week:</b> ${st.current_week||1}</p>
+          <p><b>Progression:</b> ${st.week_locked?"Locked by coach":"Auto progression"}</p>
+          <p><b>Last workout:</b> ${lastSession?lastSession.workout_name:"No workout yet"}</p>
+        </div>
+      </div>`;
+  }
+
+  if(section==="assignment"){
+    body=`
+      <div class="card">
+        <h3>Program Assignment</h3>
+        <p class="muted">Assign a program, start from any week, or lock/unlock progression.</p>
+        <label>Program</label>
+        <select id="clientProgram">
+          <option value="forge_hybrid" ${pKey==="forge_hybrid"?"selected":""}>Forge Hybrid 3-Day</option>
+          <option value="metabolic_21" ${pKey==="metabolic_21"?"selected":""}>21-Day Metabolic Reset</option>
+          <option value="stronglifts_5x5" ${pKey==="stronglifts_5x5"?"selected":""}>StrongLifts 5×5</option>
+        </select>
+        <label>Current/start week</label>
+        <input id="clientWeek" type="number" min="1" max="24" value="${st.current_week||1}">
+        <label>Progression</label>
+        <select id="clientLock">
+          <option value="false" ${!st.week_locked?"selected":""}>Auto progress after 3 workouts</option>
+          <option value="true" ${st.week_locked?"selected":""}>Locked by coach</option>
+        </select>
+        <button class="green full" onclick="saveClientAssignment('${id}')">Save assignment</button>
+      </div>`;
+  }
+
+  if(section==="progress"){
+    body=`
+      <div class="grid">
+        <div class="card"><h3>Completed Workouts</h3><h1>${sessions.length}</h1><p class="muted">Total logged sessions</p></div>
+        <div class="card"><h3>Current Week</h3><h1>${st.current_week||1}</h1><p class="muted">${pName}</p></div>
+        <div class="card"><h3>Last Workout Duration</h3><h1>${lastSession?.duration_minutes||0} min</h1><p class="muted">${lastSession?.workout_name||"No workout yet"}</p></div>
+      </div>
+      <div class="card"><h3>Workout History</h3>${sessions.map(s=>`<div class="exercise"><b>${s.workout_name}</b><p class="muted">Week ${s.week} · ${s.duration_minutes} min · ${new Date(s.created_at).toLocaleString()}</p></div>`).join("")||"<p class='muted'>No workouts yet.</p>"}</div>`;
+  }
+
+  if(section==="charts"){
+    body=`<div class="card"><h3>Charts</h3><p class="muted">Strength, speed, duration and recovery changes over time.</p></div><div id="clientChartsHost"></div>`;
+  }
+
+  if(section==="alerts"){
+    body=`
+      <div class="card"><h3>Recovery / Pain Alerts</h3><p class="muted">Flags appear when energy is low, body comfort is poor, post-workout comfort worsens, or the workout was too hard.</p></div>
+      ${redFlags.map(r=>`<div class="alertBox redFlag"><b>Alert</b><p>Energy: ${r.pre_energy||"N/A"} · Before: ${r.pre_body_comfort||"N/A"} · After: ${r.post_body_comfort||"N/A"} · Difficulty: ${r.workout_difficulty||"N/A"}</p><p class="muted">${new Date(r.created_at).toLocaleString()}</p></div>`).join("")||"<div class='card'><p class='muted'>No recovery or pain alerts yet.</p></div>"}
+      <div class="card"><h3>Recent Recovery Logs</h3>${recovery.slice(0,8).map(r=>`<div class="exercise"><b>${r.pre_energy||"Energy not recorded"}</b><p class="muted">Sleep: ${r.pre_sleep||"N/A"} · Before: ${r.pre_body_comfort||"N/A"} · After: ${r.post_body_comfort||"N/A"} · Difficulty: ${r.workout_difficulty||"N/A"}</p></div>`).join("")||"<p class='muted'>No recovery logs yet.</p>"}</div>`;
+  }
+
+  if(section==="requests"){
+    body=`
+      <div class="card"><h3>Workout Modification Requests</h3><p class="muted">Client requests for pain, discomfort, equipment limitations, or exercise changes.</p></div>
+      ${mods.map(m=>`<div class="exercise"><div class="row space"><b>${m.status||"open"}</b><span class="pill">${new Date(m.created_at).toLocaleString()}</span></div><p>${m.request_text}</p><button class="secondary" onclick="markRequestResolved(${m.id},'${id}')">Mark resolved</button></div>`).join("")||"<div class='card'><p class='muted'>No workout modification requests yet.</p></div>"}`;
+  }
+
+  if(section==="comments"){
+    body=`
+      <div class="card">
+        <h3>Coach Exercise Comment</h3>
+        <input id="commentExercise" placeholder="Exercise name">
+        <textarea id="commentText" placeholder="Comment/cue"></textarea>
+        <button class="green full" onclick="saveCoachComment('${id}')">Save comment</button>
+      </div>
+      <div class="card"><h3>Previous Comments</h3>${comments.map(c=>`<div class="exercise"><b>${c.exercise||"General"}</b><p>${c.comment||""}</p><p class="muted">${new Date(c.created_at).toLocaleString()}</p></div>`).join("")||"<p class='muted'>No comments yet.</p>"}</div>`;
+  }
+
+  el("modalBody").innerHTML=`<div class="card banner"><h2>${p.full_name||p.email}</h2><p class="muted">${p.email}</p><span class="pill">${pName}</span><span class="pill ${st.week_locked?"yellow":"green"}">Week ${st.current_week||1} ${st.week_locked?"Locked":"Auto"}</span></div>${nav}${body}`;
   el("modal").classList.add("show");
+
+  if(section==="charts"){ await renderChartsOnly(id); }
+}
+
+async function markRequestResolved(requestId, clientId){
+  const {error}=await supabaseClient.from("modification_requests").update({status:"resolved"}).eq("id",requestId);
+  if(error)return alert(error.message);
+  openClient(clientId,"requests");
+}
+
+async function renderChartsOnly(id){
+  const {data:logs=[]}=await supabaseClient.from("exercise_logs").select("*").eq("client_id",id);
+  const {data:recovery=[]}=await supabaseClient.from("recovery_logs").select("*").eq("client_id",id).order("created_at",{ascending:true});
+  el("clientChartsHost").innerHTML=`<div class="grid"><div class="card"><h3>Kg / week</h3><canvas id="kgChart"></canvas></div><div class="card"><h3>Speed / week</h3><canvas id="speedChart"></canvas></div><div class="card"><h3>Duration / week</h3><canvas id="durationChart"></canvas></div><div class="card"><h3>Recovery before/after</h3><canvas id="recoveryChart"></canvas></div></div>`;
+  setTimeout(()=>drawAllCharts(logs,recovery),80);
 }
 
 async function saveClientAssignment(id){
@@ -331,7 +476,7 @@ async function saveClientAssignment(id){
 
 async function saveCoachComment(id){
   const {error}=await supabaseClient.from("coach_comments").insert({client_id:id,coach_id:currentProfile.id,exercise:el("commentExercise").value,comment:el("commentText").value});
-  if(error)return alert(error.message); alert("Comment saved.");
+  if(error)return alert(error.message); alert("Comment saved."); openClient(id,"comments");
 }
 
 async function openClientProgress(id){closeModal();await renderProgressIntoProfile(id,true)}
