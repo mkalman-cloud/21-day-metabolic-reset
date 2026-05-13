@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Forge v4.3 Phase 3</title>
+  <title>Forge v4.4 Train as Client</title>
   <meta name="theme-color" content="#020817" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
@@ -85,7 +85,7 @@
 
 <script>
 const PERMANENT_COACH_EMAIL="marcell.fitness@gmail.com";
-let supabaseClient=null,currentUser=null,currentProfile=null,clientState=null,activeView="today",activeSession=null;
+let supabaseClient=null,currentUser=null,currentProfile=null,clientState=null,activeView="today",activeSession=null,trainAsClient=false;
 
 const PHASES=[
   ["Foundation","Weeks 1-6","Technique · control · base conditioning"],
@@ -128,6 +128,7 @@ function el(id){return document.getElementById(id)}
 function showStatus(text,ok=true){el("status").innerHTML=`<h1>Forge</h1><p class="muted">${ok?"✅":"❌"} ${text}</p>`}
 function hideStatus(){setTimeout(()=>el("status").classList.add("hide"),800)}
 function isCoach(){return currentProfile?.role==="coach"}
+function isClientView(){return !isCoach() || trainAsClient}
 function isCoachEmail(email){return String(email||"").toLowerCase()===PERMANENT_COACH_EMAIL}
 function programKey(){return clientState?.program_key||"forge_hybrid"}
 function program(){return PROGRAMS[programKey()]||PROGRAMS.forge_hybrid}
@@ -203,21 +204,41 @@ async function logout(){
   localStorage.clear();sessionStorage.clear();currentUser=null;currentProfile=null;clientState=null;location.href=location.pathname+"?logout="+Date.now();
 }
 
+
+function enterTrainAsClient(){
+  trainAsClient=true;
+  activeView="today";
+  render();
+}
+
+function exitTrainAsClient(){
+  if(activeSession){
+    const ok=confirm("You have a workout in progress. Return to coach mode anyway? You can resume it later from Train as Client.");
+    if(!ok)return;
+  }
+  trainAsClient=false;
+  activeView="today";
+  render();
+}
+
 function render(){
   const logged=!!currentUser;
   el("authView").classList.toggle("hide",logged); el("appView").classList.toggle("hide",!logged); el("topLogout").classList.toggle("hide",!logged);
   if(!logged){el("profileLine").textContent="Forge Cloud";return}
-  el("profileLine").textContent=`${currentProfile.full_name||currentUser.email} · ${currentProfile.role}`;
+  el("profileLine").textContent=`${currentProfile.full_name||currentUser.email} · ${trainAsClient ? "training as client" : currentProfile.role}`;
   renderTabs(); renderPhase(); renderToday(); renderProgram(); renderClients(); renderProfile(); renderSettings(); show(activeView,true);
 }
 
 function renderTabs(){
-  const items=isCoach()?[["today","Today"],["program","Program"],["clients","Clients"],["settings","Settings"]]:[["today","Today"],["program","Program"],["profile","Profile"],["settings","Settings"]];
+  const items=(isCoach() && !trainAsClient)
+    ? [["today","Dashboard"],["program","Programs"],["clients","Clients"],["settings","Settings"]]
+    : [["today","Today"],["program","Program"],["profile","Profile"],["settings","Settings"]];
+
   el("tabs").innerHTML=items.map(([v,l])=>`<button class="tab ${activeView===v?"active":""}" onclick="show('${v}')">${l}</button>`).join("");
 }
 
 function show(v,silent=false){
-  if(v==="clients"&&!isCoach()) v="today";
+  if(v==="clients"&&(!isCoach() || trainAsClient)) v="today";
   activeView=v; document.querySelectorAll(".view").forEach(x=>x.classList.add("hide")); el(v)?.classList.remove("hide");
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.textContent.toLowerCase()===v));
   if(!silent) render();
@@ -232,7 +253,30 @@ function todayWorkout(){const d=["Sunday","Monday","Tuesday","Wednesday","Thursd
 function workoutCard(w){return `<div class="card"><div class="row space"><div><h2>${w.day}</h2><span class="pill">${w.schedule}</span><span class="pill">${program().name}</span><span class="pill">Week ${week()}</span></div><div class="row"><button class="secondary" onclick="previewWorkout('${esc(w.day)}')">Open</button><button class="green" onclick="preWorkoutCheckin('${esc(w.day)}')">Start</button></div></div></div>`}
 
 function renderToday(){
+  if(isCoach() && !trainAsClient){
+    el("today").innerHTML=`
+      <div class="card banner">
+        <h2>Coach Dashboard</h2>
+        <p class="muted">Manage clients, programs, recovery alerts, and workout progress.</p>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <h3>Train as Client</h3>
+          <p class="muted">Use your coach account as a client to log your own workouts and test the client experience.</p>
+          <button class="green full" onclick="enterTrainAsClient()">Train as Client</button>
+        </div>
+        <div class="card">
+          <h3>Client Management</h3>
+          <p class="muted">Open Clients to assign programs, lock weeks, view progress and recovery alerts.</p>
+          <button class="secondary full" onclick="show('clients')">Open Clients</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
   el("today").innerHTML=`
+    ${trainAsClient ? `<div class="card banner"><div class="row space"><div><h2>Train as Client Mode</h2><p class="muted">You are logging your own workout using the client experience.</p></div><button class="secondary" onclick="exitTrainAsClient()">Return to Coach Mode</button></div></div>` : ""}
     <div class="card">
       <h2>Today</h2>
       <p class="muted">Your assigned program is <b>${program().name}</b>.</p>
@@ -242,6 +286,27 @@ function renderToday(){
       : workoutCard(todayWorkout())
     }
   `;
+}
+
+function renderProgram(){
+  if(isCoach() && !trainAsClient){
+    el("program").innerHTML=`
+      <div class="card banner">
+        <h2>Programs</h2>
+        <p class="muted">Programs available for assignment to clients.</p>
+      </div>
+      ${Object.keys(PROGRAMS).map(k=>`
+        <div class="card">
+          <h2>${PROGRAMS[k].name}</h2>
+          <p class="muted">${PROGRAMS[k].description}</p>
+          ${PROGRAMS[k].schedule.map(w=>`<div class="exercise"><b>${w.day}</b><p class="muted">${w.schedule} · ${w.exercises.length} items</p></div>`).join("")}
+        </div>
+      `).join("")}
+    `;
+    return;
+  }
+
+  el("program").innerHTML=`<div class="card"><h2>Assigned Program: ${program().name}</h2><p class="muted">${program().description}</p></div>${program().schedule.map(workoutCard).join("")}`;
 }
 
 function preWorkoutCheckin(day){
@@ -339,7 +404,7 @@ function renderSession(){
   show("today",true);
 }
 
-function label1(e){return e.type==="speed"?"Speed Level":e.type==="incline"?"Incline Level":(e.type==="bodyweight"||e.type==="duration_bodyweight")?"Body Weight":e.type==="duration"?"Duration":e.type==="note"?"Note":"kg"}
+function label1(e){return e.type==="speed"?"Speed Level":e.type==="incline"?"Incline Level":(e.type==="bodyweight"||e.type==="duration_bodyweight")?"Body Weight":e.type==="duration"?"Completed duration":e.type==="note"?"Note":"kg"}
 function label2(e){return (e.type==="duration"||e.type==="duration_bodyweight")?"min/sec":e.type==="speed"?"Speed/round":e.type==="incline"?"duration":e.type==="note"?"":"reps"}
 
 function postWorkoutCheckin(){
@@ -413,7 +478,7 @@ async function finishWorkout(){
   closeModal();
   alert("Workout saved. Completed "+completed+" of "+total+" sets in "+duration+" min.");
   await loadClientState(currentProfile.id);
-  activeView=isCoach()?"clients":"profile";
+  activeView=(isCoach() && !trainAsClient)?"clients":"profile";
   render();
 }
 
@@ -654,8 +719,22 @@ async function renderProgressIntoProfile(id=currentProfile.id,asModal=false){
 }
 
 function renderProfile(){
-  if(isCoach()){el("profile").innerHTML="";return}
-  el("profile").innerHTML=`<div class="card"><h2>Profile</h2><p class="muted">${currentProfile.email}</p><p><b>Program:</b> ${program().name}</p><p><b>Current week:</b> ${week()}</p></div><div class="card"><h3>Workout Modification Request</h3><p class="muted">Use this for pain/discomfort, equipment limitations, or exercise changes.</p><textarea id="modRequestText" placeholder="What would you like changed?"></textarea><button class="green full" onclick="submitModificationRequest()">Submit request</button></div>`;
+  if(isCoach() && !trainAsClient){el("profile").innerHTML="";return}
+
+  el("profile").innerHTML=`
+    ${trainAsClient ? `<div class="card banner"><div class="row space"><div><h2>My Training Profile</h2><p class="muted">Coach account using client mode.</p></div><button class="secondary" onclick="exitTrainAsClient()">Return to Coach Mode</button></div></div>` : ""}
+    <div class="card">
+      <h2>Profile</h2>
+      <p class="muted">${currentProfile.email}</p>
+      <p><b>Program:</b> ${program().name}</p>
+      <p><b>Current week:</b> ${week()}</p>
+    </div>
+    <div class="card">
+      <h3>Workout Modification Request</h3>
+      <p class="muted">Use this for pain/discomfort, equipment limitations, or exercise changes.</p>
+      <textarea id="modRequestText" placeholder="What would you like changed?"></textarea>
+      <button class="green full" onclick="submitModificationRequest()">Submit request</button>
+    </div>`;
   renderProgressIntoProfile(currentProfile.id,false);
 }
 
@@ -671,7 +750,16 @@ function recoveryValues(rows){const m={};rows.forEach((r,i)=>{m[i+1]=scoreRecove
 function scoreRecovery(r){let s=0;s+=r.pre_energy==="High energy"?3:r.pre_energy==="Moderate energy"?2:1;s+=r.pre_body_comfort==="Comfortable and mobile"?3:r.pre_body_comfort==="A little stiff"?2:1;s+=r.post_body_comfort==="Better than before"?3:r.post_body_comfort==="About the same"?2:1;return s}
 function drawChart(id,data){const c=el(id);if(!c)return;const ctx=c.getContext("2d");c.width=c.clientWidth*2;c.height=240*2;ctx.scale(2,2);ctx.clearRect(0,0,c.width,c.height);const keys=Object.keys(data),vals=keys.map(k=>data[k]),max=Math.max(1,...vals);ctx.strokeStyle="#60a5fa";ctx.lineWidth=3;ctx.beginPath();keys.forEach((k,i)=>{const x=30+i*((c.clientWidth-60)/Math.max(1,keys.length-1)),y=200-(vals[i]/max)*150;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);ctx.fillStyle="#94a3b8";ctx.fillText("W"+k,x-8,222);ctx.fillText(String(vals[i]),x-8,y-8)});ctx.stroke()}
 
-function renderSettings(){el("settings").innerHTML=`<div class="card"><h2>Settings</h2><p class="muted">${currentProfile.email} · ${currentProfile.role}</p><button class="red full" onclick="logout()">Force log out</button></div>`}
+function renderSettings(){
+  el("settings").innerHTML=`
+    <div class="card">
+      <h2>Settings</h2>
+      <p class="muted">${currentProfile.email} · ${trainAsClient ? "training as client" : currentProfile.role}</p>
+      ${isCoach() ? `<button class="secondary full" onclick="${trainAsClient ? "exitTrainAsClient()" : "enterTrainAsClient()"}">${trainAsClient ? "Return to Coach Mode" : "Train as Client"}</button><br><br>` : ""}
+      <button class="red full" onclick="logout()">Force log out</button>
+    </div>`;
+}
+
 function closeModal(){el("modal").classList.remove("show")}
 init();
 </script>
