@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Forge v4.4 Train as Client</title>
+  <title>Forge v4.5 Train as Client</title>
   <meta name="theme-color" content="#020817" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
@@ -758,6 +758,103 @@ function renderSettings(){
       ${isCoach() ? `<button class="secondary full" onclick="${trainAsClient ? "exitTrainAsClient()" : "enterTrainAsClient()"}">${trainAsClient ? "Return to Coach Mode" : "Train as Client"}</button><br><br>` : ""}
       <button class="red full" onclick="logout()">Force log out</button>
     </div>`;
+}
+
+
+
+// --- Session and workout helper functions added in Forge v4.5 login fix ---
+function storageKey(){
+  return currentProfile?.id ? `forge_active_session_${currentProfile.id}` : "forge_active_session";
+}
+
+function loadActiveSession(){
+  try{
+    const raw = localStorage.getItem(storageKey());
+    activeSession = raw ? JSON.parse(raw) : null;
+  }catch(err){
+    console.warn("Could not load active session", err);
+    activeSession = null;
+  }
+}
+
+function saveActiveSession(){
+  try{
+    if(activeSession) localStorage.setItem(storageKey(), JSON.stringify(activeSession));
+  }catch(err){
+    console.warn("Could not save active session", err);
+  }
+}
+
+function clearActiveSession(){
+  try{ localStorage.removeItem(storageKey()); }catch(err){ console.warn(err); }
+}
+
+function esc(str){
+  return String(str ?? "").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,"&quot;");
+}
+
+function findWorkout(day){
+  const decoded = String(day ?? "").replace(/&quot;/g,'"');
+  return program().schedule.find(w => w.day === decoded) || todayWorkout() || program().schedule[0];
+}
+
+function previewWorkout(day){
+  const w = findWorkout(day);
+  el("modalBody").innerHTML = `
+    <div class="card banner">
+      <h2>${w.day}</h2>
+      <p class="muted">${program().name} · ${w.schedule} · Week ${week()}</p>
+    </div>
+    <div class="card">
+      <h3>Workout Plan</h3>
+      ${w.exercises.map(e=>`
+        <div class="exercise">
+          <b>${e[1]}</b>
+          <p class="muted">${e[0]} · ${e[2]} x ${e[3]} ${e[4]}</p>
+        </div>
+      `).join("")}
+      <button class="green full" onclick="preWorkoutCheckin('${esc(w.day)}')">Start workout</button>
+    </div>`;
+  el("modal").classList.add("show");
+}
+
+function totalSetCount(){
+  if(!activeSession?.exercises) return 0;
+  return activeSession.exercises.reduce((sum,e)=>sum + (e.logs?.length || 0),0);
+}
+
+function completedSetCount(){
+  if(!activeSession?.exercises) return 0;
+  return activeSession.exercises.reduce((sum,e)=>sum + (e.logs||[]).filter(l=>l.done).length,0);
+}
+
+function sessionCompletionPercent(){
+  const total = totalSetCount();
+  if(!total) return 0;
+  return Math.round((completedSetCount()/total)*100);
+}
+
+function saveSet(exerciseIndex,setIndex,field,value){
+  if(!activeSession?.exercises?.[exerciseIndex]?.logs?.[setIndex]) return;
+  activeSession.exercises[exerciseIndex].logs[setIndex][field] = value;
+  saveActiveSession();
+}
+
+function toggleSet(exerciseIndex,setIndex){
+  if(!activeSession?.exercises?.[exerciseIndex]?.logs?.[setIndex]) return;
+  const log = activeSession.exercises[exerciseIndex].logs[setIndex];
+  log.done = !log.done;
+  saveActiveSession();
+  renderSession();
+}
+
+function cancelWorkout(){
+  if(!activeSession) return;
+  const ok = confirm("Cancel this workout? The current unsaved workout log will be removed from this device.");
+  if(!ok) return;
+  activeSession = null;
+  clearActiveSession();
+  render();
 }
 
 function closeModal(){el("modal").classList.remove("show")}
