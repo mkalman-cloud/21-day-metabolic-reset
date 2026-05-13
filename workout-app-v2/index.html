@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Forge v4.12 Inline Right Dashboard</title>
+  <title>Forge v4.13 Clickable Workout History</title>
   <meta name="theme-color" content="#020817" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
@@ -499,7 +499,7 @@ function renderSession(){
         #forgeRightSidebar{position:relative!important;top:auto!important;order:-1;}
       }
     </style>
-    <div class="versionTag">Forge v4.12 dashboard</div>
+    <div class="versionTag">Forge v4.13 history details</div>
   `;
 
   updateRestTimerDisplay();
@@ -821,7 +821,7 @@ async function renderProgressIntoProfile(id=currentProfile.id,asModal=false){
   const {data:sessions=[]}=await supabaseClient.from("workout_sessions").select("*").eq("client_id",id).order("created_at",{ascending:false});
   const {data:logs=[]}=await supabaseClient.from("exercise_logs").select("*").eq("client_id",id);
   const {data:recovery=[]}=await supabaseClient.from("recovery_logs").select("*").eq("client_id",id).order("created_at",{ascending:true});
-  const html=`${readinessCard(recovery,"Current Readiness")}<div class="card"><h2>Progress + Charts</h2><p class="muted">${sessions.length} completed workouts.</p></div><div class="grid"><div class="card"><h3>Readiness / session</h3><canvas id="readinessChart"></canvas></div><div class="card"><h3>Kg / week</h3><canvas id="kgChart"></canvas></div><div class="card"><h3>Speed / week</h3><canvas id="speedChart"></canvas></div><div class="card"><h3>Duration / week</h3><canvas id="durationChart"></canvas></div><div class="card"><h3>Recovery before/after</h3><canvas id="recoveryChart"></canvas></div></div><div class="card"><h3>Workout history</h3>${sessions.map(s=>`<div class="exercise"><b>${s.workout_name}</b><p class="muted">Week ${s.week} · ${s.duration_minutes} min · ${new Date(s.created_at).toLocaleString()}</p></div>`).join("")||"<p class='muted'>No workouts yet.</p>"}</div>`;
+  const html=`${readinessCard(recovery,"Current Readiness")}<div class="card"><h2>Progress + Charts</h2><p class="muted">${sessions.length} completed workouts.</p></div><div class="grid"><div class="card"><h3>Readiness / session</h3><canvas id="readinessChart"></canvas></div><div class="card"><h3>Kg / week</h3><canvas id="kgChart"></canvas></div><div class="card"><h3>Speed / week</h3><canvas id="speedChart"></canvas></div><div class="card"><h3>Duration / week</h3><canvas id="durationChart"></canvas></div><div class="card"><h3>Recovery before/after</h3><canvas id="recoveryChart"></canvas></div></div><div class="card"><h3>Workout history</h3>${sessions.map(s=>`<div class="exercise" style="cursor:pointer" onclick="openSessionDetails('${s.id}')"><div class="row space"><div><b>${s.workout_name}</b><p class="muted">Week ${s.week} · ${s.duration_minutes} min · ${new Date(s.created_at).toLocaleString()}</p></div><button class="secondary" onclick="event.stopPropagation();openSessionDetails('${s.id}')">Open details</button></div></div>`).join("")||"<p class='muted'>No workouts yet.</p>"}</div>`;
   if(asModal){el("modalBody").innerHTML=html;el("modal").classList.add("show")}else{el("profile").innerHTML+=html}
   setTimeout(()=>drawAllCharts(logs,recovery),80);
 }
